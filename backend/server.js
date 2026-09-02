@@ -1,13 +1,21 @@
-const { createServer } = require('node:http');
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const PORT = 5000;
 
-const hostname = '127.0.0.1';
-const port = 3005;
+app.use(cors());
+app.use(express.json());
 
-const server = createServer((req, res) => {
-  res.statusCode = 200;
-  res.end('Hello World');
+app.get('/api/message', (req, res) => {
+    res.json({ message: "Hello from the Node.js backend!" });
 });
 
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
+app.get('/api/number', (req, res) => {
+  res.json({ message : "10"});
+});
+
+
+
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
