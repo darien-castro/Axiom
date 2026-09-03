@@ -24,8 +24,14 @@ async function get_user_courses() {
   }
 
   const json = await response.json();
-  
-  return json;
+
+  const dataset = [];
+
+  // toDo only returning course names, not any other data!
+  for (const course of json){
+    dataset.push(`${course.name}`);
+  };
+  return dataset;
 }
 
 // export function
