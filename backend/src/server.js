@@ -9,5 +9,6 @@ API.get_user_courses().then(courses => {
   };
 });
 
+console.log(addon.hello()); 
 
 

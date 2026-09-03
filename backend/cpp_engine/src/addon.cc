@@ -4,7 +4,7 @@ Napi::String Hello(const Napi::CallbackInfo& info){
 
   Napi::Env env = info.Env();
 
-  return Napi::String::New(env, "Hello Node.js World!");
+  return Napi::String::New(env, "Hello Node.js World!, From C++");
 
 }
 
