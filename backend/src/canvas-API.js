@@ -7,7 +7,7 @@ const api_key = key.get_api_key();
 // base url for calls
 const base_GET_url = 'https://instructure.charlotte.edu/api/v1/';
 
-
+// gathering information from api
 async function get_user_courses() {
   const response = await fetch(`${base_GET_url}courses`, {
     method: 'GET',
@@ -16,6 +16,7 @@ async function get_user_courses() {
     }
   });
 
+  // error checking
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`API Request Failed: ${response.status} ${response.statusText}`);
@@ -27,7 +28,7 @@ async function get_user_courses() {
 
   const dataset = [];
 
-  // toDo only returning course names, not any other data!
+  // only returning course names, not any other data!
   for (const course of json){
     dataset.push(`${course.name}`);
   };
