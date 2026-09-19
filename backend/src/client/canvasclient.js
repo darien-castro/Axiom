@@ -60,7 +60,11 @@ class Canvas_API{
     const result = await this.GetRequest(apiEndpoint);
     return result;
   };
-
+  async GetUserInformation() {
+    const apiEndpoint = "/api/v1/users/self";
+    const result = await this.GetRequest(apiEndpoint);
+    return result;
+  }
 
   async GetCourseAssignments(CourseID) {
     // Lists all assignments (the prompts/details) for the course
