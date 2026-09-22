@@ -46,10 +46,10 @@ function cleanCourseAssignments(assignmentsArray){
   })
 }
 function cleanUserInformation(userInfo) {
-  return [{
+  return {
     firstName: userInfo.first_name, 
     lastName: userInfo.last_name,
     userID: userInfo.id 
-  }];
+  };
 }
 module.exports = {cleanCourses, cleanCourseGrades, cleanCourseAssignments, cleanUserInformation}

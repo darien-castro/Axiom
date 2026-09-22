@@ -1,7 +1,3 @@
-const thekey = require('./api-key.js')
-
-// take out soon!
-const key = thekey.myKey()
 class Canvas_API{
   m_baseURL;
   m_apiKey;

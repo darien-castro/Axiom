@@ -45,17 +45,13 @@ async function printEverything(){
 }
 
 async function test(){
-  const courseData = await classTest.GetCourseAssignments('265289');
-  const cleanCourseData = mapper.cleanCourseAssignments(courseData);
-  console.log(cleanCourseData);
-
+  const userInfo = await classTest.GetUserInformation();
+  const cleanUserInfo = mapper.cleanUserInformation(userInfo);
+  courseService.initAllTables();
+  courseService.pushGeneralUserInfo(cleanUserInfo);
+  console.log("Done!")
 }
 
-
-
-/*
-let service = require('./services/courseService.js')
-let courseService = new service();
-*/
-
+test();
+printEverything(); 
 

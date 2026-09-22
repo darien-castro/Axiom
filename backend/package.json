@@ -3,14 +3,17 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/server.js",
-  "type": "commonjs", 
+  "type": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js"
   },
   "dependencies": {
     "cors": "^2.8.6",
+    "dotenv": "^18.0.2",
     "express": "^5.2.1",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.24.4",
     "node-addon-api": "^8.9.2"
   },
   "devDependencies": {

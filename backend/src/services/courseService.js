@@ -5,7 +5,8 @@ const db = require('./db.js')
 
 class courseService{
   // this class will be the one cleaning the variables
-  constructor(){};
+  constructor(){
+  };
 
 async createUserTable() {
     const query = `CREATE TABLE IF NOT EXISTS User (
@@ -51,12 +52,35 @@ async createUserTable() {
       console.error("Error creating tables:", error);
     }
   }
-  pushGeneralUserInfo(userInfoJSON){};
-  pushCourseInformation(courseInfoJSON){};
-  pushGradeInformation(gradeInfoJSON){};
+
+  pushGeneralUserInfo(userInfoJSON){
+    try{
+      const query = `INSERT IGNORE INTO User(UserID, first_name, last_name)
+                    VALUES (?,?,?)`;
+      const values = [
+        userInfoJSON.userID,
+        userInfoJSON.firstName,
+        userInfoJSON.lastName
+
+      ]
+      db.query(query, values);
+    }
+    catch(error){
+      console.error("Error Pushing Data into tables: ", error); 
+    }
+  };
+
+  pushCourseInformation(courseInfoJSON){
+    
+  };
+  
+  pushGradeInformation(gradeInfoJSON){
+    
+  };
+
   getUserInfo(){};
   getCourseInformation(courseID){};
-  getGradeInformation{courseID};
+  getGradeInformation(courseID){};
 }
 
 module.exports = new courseService()
