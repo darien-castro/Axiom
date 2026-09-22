@@ -2,6 +2,7 @@ const mysql = require('mysql')
 const map = require('../mapper/mapper.js')
 const apiservice = require('../client/canvasclient.js')
 const db = require('./db.js')
+const crypto = require('../crypto/crypto.js')
 
 class courseService{
   // this class will be the one cleaning the variables
@@ -10,7 +11,7 @@ class courseService{
 
 async createUserTable() {
     const query = `CREATE TABLE IF NOT EXISTS User (
-      userID INT PRIMARY KEY,
+      userID BINARY(32) PRIMARY KEY,
       first_name VARCHAR(255) NOT NULL,
       last_name VARCHAR(255)
     )`;
@@ -27,7 +28,7 @@ async createUserTable() {
 
   async createUserCoursesTable() {
     const query = `CREATE TABLE IF NOT EXISTS User_Courses (
-      userID INT,
+      userID BINARY(32),
       courseID INT,
       grade VARCHAR(10),
       PRIMARY KEY (userID, courseID),
@@ -53,17 +54,17 @@ async createUserTable() {
     }
   }
 
-  pushGeneralUserInfo(userInfoJSON){
+  async pushGeneralUserInfo(userInfoJSON){
     try{
       const query = `INSERT IGNORE INTO User(UserID, first_name, last_name)
                     VALUES (?,?,?)`;
       const values = [
-        userInfoJSON.userID,
+        crypto.sha256(userInfoJSON.userID),
         userInfoJSON.firstName,
         userInfoJSON.lastName
 
       ]
-      db.query(query, values);
+      await db.query(query, values);
     }
     catch(error){
       console.error("Error Pushing Data into tables: ", error); 

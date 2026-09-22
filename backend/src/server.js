@@ -17,6 +17,10 @@ const courseService = require('./services/courseService.js')
 // cpp addon stuff
 const addon = require('../build/Release/addon.node');
 
+// crypto stuff
+
+const crypto = require('./crypto/crypto.js')
+
 
 
 
@@ -52,6 +56,12 @@ async function test(){
   console.log("Done!")
 }
 
+async function testCrypt(message){
+  const data = await crypto.sha256(message);
+  console.log(data);
+}
+
+printEverything();
+
 test();
-printEverything(); 
 
