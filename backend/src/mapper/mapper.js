@@ -1,26 +1,25 @@
 function cleanCourses(coursesArray) {
-  // get general setup for how courses look
   const academicCourseRegex = /^(\d{6})-(.*?)-([A-Z]{3,4})-(\d{4})-(\d{3})-(.*)$/;
-    return coursesArray.map(course => {
-      const match = course.name.match(academicCourseRegex);
-      if (match){
-        return{
-          // general parsing
-          courseID: String(course.id),
-          courseName: match[6],
-          courseTermId: match[1],
-          courseTerm: match[2],
-          courseCode: match[4],
-          courseSection: match[5],
-          courseDepartment: match[3]
-        }
-      }
-      else{
-        return{
-        // need to fix possible case
-        }
-      }
-
+  
+  // Use flatMap instead of map
+  return coursesArray.flatMap(course => {
+    const match = course.name.match(academicCourseRegex);
+    
+    if (match) {
+      // Wrap the returned object in an array
+      return [{
+        courseID: String(course.id),
+        courseName: match[6],
+        courseTermId: match[1],
+        courseTerm: match[2],
+        courseCode: match[4],
+        courseSection: match[5],
+        courseDepartment: match[3]
+      }];
+    } else {
+      // Return an empty array. flatMap will just ignore it.
+      return []; 
+    }
   });
 }
 
@@ -52,4 +51,5 @@ function cleanUserInformation(userInfo) {
     userID: userInfo.id 
   };
 }
+
 module.exports = {cleanCourses, cleanCourseGrades, cleanCourseAssignments, cleanUserInformation}

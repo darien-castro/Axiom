@@ -20,8 +20,11 @@ async createUserTable() {
 
   async createCourseTable() {
     const query = `CREATE TABLE IF NOT EXISTS Course (
-      courseID INT PRIMARY KEY,
-      course_name VARCHAR(255) NOT NULL
+      courseID VARCHAR(255) PRIMARY KEY,
+      course_name VARCHAR(255) NOT NULL,
+      course_term VARCHAR(255),
+      course_section VARCHAR(50),
+      courseDepartment VARCHAR(255)
     )`;
     await db.query(query);
   }
@@ -29,7 +32,7 @@ async createUserTable() {
   async createUserCoursesTable() {
     const query = `CREATE TABLE IF NOT EXISTS User_Courses (
       userID BINARY(32),
-      courseID INT,
+      courseID VARCHAR(255),
       grade VARCHAR(10),
       PRIMARY KEY (userID, courseID),
       FOREIGN KEY (userID) REFERENCES User(userID),
@@ -71,8 +74,27 @@ async createUserTable() {
     }
   };
 
-  pushCourseInformation(courseInfoJSON){
-    
+  async pushCourseInformation(courseInfoJSON) {
+    try {
+      // 1. Change 'in' to 'of' and add 'const'
+      for (const course of courseInfoJSON) {
+        const query = `INSERT IGNORE INTO Course(courseID, course_name, course_term, course_section, courseDepartment)
+                       VALUES(?,?,?,?,?)`;
+        const values = [
+          // 2. Reference 'course', not the whole 'courseInfoJSON' array
+          course.courseID,
+          course.courseName,
+          course.courseTerm,
+          course.courseSection,
+          course.courseDepartment
+        ];
+        
+        console.log(values);
+        await db.query(query, values);
+      }
+    } catch (error) {
+      console.error("Error Pushing Data into Table: ", error);
+    }
   };
   
   pushGradeInformation(gradeInfoJSON){
