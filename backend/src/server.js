@@ -22,36 +22,21 @@ const addon = require('../build/Release/addon.node');
 let classTest = new API("https://instructure.charlotte.edu", apiKey);
 
 async function printEverything(){
-/*
   console.log("============= Courses ==================");
   const courses = await classTest.GetCourses();
-  const cleanCourses = mapper.cleanCourses(courses);
-  console.log(cleanCourses);
+  console.log(courses);
 
-  console.log("\n\n\n");
-
-  console.log("============= Course Grades ================");
-  const courseGrades = await classTest.GetCourseGrades();
-  const cleanCourseGrades = mapper.cleanCourseGrades(courseGrades);
-  console.log(cleanCourseGrades); 
-  console.log("\n\n\n");
-
-
-  console.log("============= User information ================");
-  const userInfo = await classTest.GetUserInformation();
-  const cleanUserInfo = mapper.cleanUserInformation(userInfo);
-  console.log(cleanUserInfo); 
-*/
+/*
   const testCourseCode = "265289";
 
   const courseAssignments = await classTest.GetCourseSubmissions(testCourseCode);
   console.log(courseAssignments);
-
+*/
 }
 
 async function testService(){
   courseService.initAllTables();
-  
+
   const courses = await classTest.GetCourses();
   const cleanCourses = mapper.cleanCourses(courses);
   courseService.pushCourseInformation(cleanCourses);
@@ -59,7 +44,6 @@ async function testService(){
   const userInfo = await classTest.GetUserInformation();
   const cleanUserInfo = mapper.cleanUserInformation(userInfo);
   courseService.pushGeneralUserInfo(cleanUserInfo);
-
 }
 
 printEverything(); 

@@ -71,20 +71,20 @@ class Canvas_API{
   async GetCourseAssignment(CourseID, AssignmentID) {
     // Gets the details (due dates, points possible) for one specific assignment
     const apiEndpoint = `/api/v1/courses/${CourseID}/assignments/${AssignmentID}`;
-    const result = await GetRequest(apiEndpoint);
+    const result = await this.GetRequest(apiEndpoint);
     return result;
   }
   async GetCourseSubmissions(CourseID) {
     // Lists all of the student's submissions for this specific course in one batch
     const apiEndpoint = `/api/v1/courses/${CourseID}/students/submissions`;
-    const result = await GetRequest(apiEndpoint);
+    const result = await this.GetRequest(apiEndpoint);
     return result;
   }
   async GetSubmissionGrade(CourseID, AssignmentID) {
     // Gets the student's specific submission and grade for a single assignment
     // 'self' safely maps to the authenticated student
     const apiEndpoint = `/api/v1/courses/${CourseID}/assignments/${AssignmentID}/submissions/self`;
-    const result = await GetRequest(apiEndpoint);
+    const result = await this.GetRequest(apiEndpoint);
     return result;
   }
 }

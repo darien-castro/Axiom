@@ -1,3 +1,6 @@
+
+const crypto = require('../crypto/crypto.js')
+
 function cleanCourses(coursesArray) {
   const academicCourseRegex = /^(\d{6})-(.*?)-([A-Z]{3,4})-(\d{4})-(\d{3})-(.*)$/;
   
@@ -48,7 +51,7 @@ function cleanUserInformation(userInfo) {
   return {
     firstName: userInfo.first_name, 
     lastName: userInfo.last_name,
-    userID: userInfo.id 
+    userID: crypto.sha256(userInfo.id)
   };
 }
 
