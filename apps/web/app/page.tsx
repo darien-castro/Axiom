@@ -8,17 +8,32 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button" 
- import {
+import {
   Field,
   FieldDescription,
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator" 
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const [inputValue, setInputValue] = useState("")
+  const [inputValue, setInputValue] = useState('');
+  const [showGif, setShowGif] = useState(false);
+  const router = useRouter();
+  const handleAction = (val) => {
+    setInputValue(val); 
 
+    if (val === 'testing') {
+      setShowGif(true); 
+
+      setTimeout(() => {
+        router.push('/mocksite');
+      }, 2000);
+    } else {
+      setShowGif(false);
+    }
+  }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 bg-black p-4 text-white">
       
@@ -51,9 +66,8 @@ export default function Home() {
                     placeholder="sk-..." 
                     className="border-zinc-800 bg-zinc-900 text-white placeholder:text-zinc-600 focus-visible:ring-zinc-700"
                     onKeyDown={(e) => {
-                      // Check if the key pressed was Enter
                       if (e.key === 'Enter') {
-                        setInputValue(e.currentTarget.value);
+                        handleAction(e.currentTarget.value);
                       }
                     }}
                   />
@@ -67,12 +81,11 @@ export default function Home() {
           <div className="flex w-full items-center justify-center pr-6 opacity-0 transition-opacity delay-75 duration-500 group-hover:opacity-100">
             <div className="relative h-20 w-20 overflow-hidden rounded-full ring-2 ring-white/20">
               
-              {/* FIXED SYNTAX: Added {(() => { ... })()} */}
               {(() => {
-                if (inputValue === 'testing') {
+                if (showGif) {
                   return (
                     <Image 
-                      key="success-gif" // <--- Forces GIF to restart if re-rendered
+                      key="success-gif" 
                       src="/success_checkmark.gif" 
                       alt="Success"
                       fill
@@ -80,10 +93,10 @@ export default function Home() {
                     />
                   )
                 }
-                else if (inputValue !== 'testing' && inputValue !== '') {
+                else if (!showGif && inputValue !== '' && inputValue !== 'testing') {
                   return (
                     <Image 
-                      key="failed-gif" // <--- Forces GIF to restart if re-rendered
+                      key={`failed-gif-${inputValue}`} // Using inputValue in key forces restart when they try again
                       src="/failed_x.gif" 
                       alt="Failed"
                       fill
