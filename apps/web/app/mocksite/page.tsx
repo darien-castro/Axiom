@@ -46,12 +46,12 @@ export default function Page() {
 
         </div>
 
-        <div className="w-[65%] h-[90%] rounded-2xl border border-border bg-card/40 p-6 shadow-sm">
+        <div className="flex flex-col w-[65%] h-[90%] rounded-2xl border border-border bg-card/40 p-6 shadow-sm">
           <div>
             <ChartAreaInteractive></ChartAreaInteractive>
           </div>
-          <div>
-            {/* Content goes here */}
+          <div className="flex justify-center items-center w-[100%] h-[90%] bg-card rounded-2xl mt-5">
+            <h1 className="text-white font-bolder font-stretch-expanded tracking-[5px] border-[5] p-15">Hello World</h1>
           </div>
         </div>
 

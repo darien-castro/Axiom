@@ -1,3 +1,4 @@
+/* Dusty Ocean Theme */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -50,74 +51,72 @@
 }
 
 :root {
-  /* Gruvbox Light Mode */
-  --background: #fbf1c7;
-  --foreground: #3c3836;
-  --card: #f2e5bc;
-  --card-foreground: #3c3836;
-  --popover: #f2e5bc;
-  --popover-foreground: #3c3836;
-  --primary: #d65d0e;
-  --primary-foreground: #fbf1c7;
-  --secondary: #ebdbb2;
-  --secondary-foreground: #3c3836;
-  --muted: #ebdbb2;
-  --muted-foreground: #7c6f64;
-  --accent: #ebdbb2;
-  --accent-foreground: #d65d0e;
-  --destructive: #cc241d;
-  --border: #d5c4a1;
-  --input: #d5c4a1;
-  --ring: #d65d0e;
-  --chart-1: #cc241d;
-  --chart-2: #98971a;
-  --chart-3: #d79921;
-  --chart-4: #458588;
-  --chart-5: #b16286;
+  --background: #f1f4f6;
+  --foreground: #2b343d;
+  --card: #e6ebef;
+  --card-foreground: #2b343d;
+  --popover: #e6ebef;
+  --popover-foreground: #2b343d;
+  --primary: #5a798c;
+  --primary-foreground: #ffffff;
+  --secondary: #d1d7de;
+  --secondary-foreground: #3b4652;
+  --muted: #d1d7de;
+  --muted-foreground: #6c7985;
+  --accent: #d1d7de;
+  --accent-foreground: #5a798c;
+  --destructive: #ad5c63;
+  --border: #d1d7de;
+  --input: #d1d7de;
+  --ring: #5a798c;
+  --chart-1: #ad5c63;
+  --chart-2: #658c6d;
+  --chart-3: #b09163;
+  --chart-4: #5a798c;
+  --chart-5: #7d6b8c;
   --radius: 0.625rem;
-  --sidebar: #fbf1c7;
-  --sidebar-foreground: #3c3836;
-  --sidebar-primary: #d65d0e;
-  --sidebar-primary-foreground: #fbf1c7;
-  --sidebar-accent: #ebdbb2;
-  --sidebar-accent-foreground: #d65d0e;
-  --sidebar-border: #d5c4a1;
-  --sidebar-ring: #d65d0e;
+  --sidebar: #f1f4f6;
+  --sidebar-foreground: #2b343d;
+  --sidebar-primary: #5a798c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #d1d7de;
+  --sidebar-accent-foreground: #5a798c;
+  --sidebar-border: #d1d7de;
+  --sidebar-ring: #5a798c;
 }
 
 .dark {
-  /* Gruvbox Dark Mode (Warm, zero eye-strain) */
-  --background: #282828;
-  --foreground: #ebdbb2; /* Warm parchment text */
-  --card: #3c3836;
-  --card-foreground: #ebdbb2;
-  --popover: #3c3836;
-  --popover-foreground: #ebdbb2;
-  --primary: #fe8019; /* Gruvbox Orange */
-  --primary-foreground: #282828;
-  --secondary: #504945;
-  --secondary-foreground: #ebdbb2;
-  --muted: #3c3836;
-  --muted-foreground: #a89984;
-  --accent: #504945;
-  --accent-foreground: #fe8019;
-  --destructive: #fb4934;
-  --border: #504945;
-  --input: #504945;
-  --ring: #fe8019;
-  --chart-1: #fb4934; /* Bright Red */
-  --chart-2: #b8bb26; /* Bright Green */
-  --chart-3: #fabd2f; /* Bright Yellow */
-  --chart-4: #83a598; /* Bright Blue */
-  --chart-5: #d3869b; /* Bright Purple */
-  --sidebar: #3c3836;
-  --sidebar-foreground: #ebdbb2;
-  --sidebar-primary: #fe8019;
-  --sidebar-primary-foreground: #282828;
-  --sidebar-accent: #504945;
-  --sidebar-accent-foreground: #fe8019;
-  --sidebar-border: #504945;
-  --sidebar-ring: #fe8019;
+  --background: #1b2229;
+  --foreground: #d1d7de;
+  --card: #232b33;
+  --card-foreground: #d1d7de;
+  --popover: #232b33;
+  --popover-foreground: #d1d7de;
+  --primary: #779db3;
+  --primary-foreground: #1b2229;
+  --secondary: #323d47;
+  --secondary-foreground: #e6ebef;
+  --muted: #323d47;
+  --muted-foreground: #8a98a6;
+  --accent: #323d47;
+  --accent-foreground: #779db3;
+  --destructive: #d46e76;
+  --border: #323d47;
+  --input: #323d47;
+  --ring: #779db3;
+  --chart-1: #d46e76;
+  --chart-2: #84b38e;
+  --chart-3: #d6b27c;
+  --chart-4: #779db3;
+  --chart-5: #9f87b3;
+  --sidebar: #1b2229;
+  --sidebar-foreground: #d1d7de;
+  --sidebar-primary: #779db3;
+  --sidebar-primary-foreground: #1b2229;
+  --sidebar-accent: #323d47;
+  --sidebar-accent-foreground: #779db3;
+  --sidebar-border: #323d47;
+  --sidebar-ring: #779db3;
 }
 
 @layer base {
@@ -155,9 +154,8 @@
 .card:hover {
   width: 15vw;
   border-color: var(--ring);
-  /* Muted, warm amber/orange glow */
-  box-shadow: 0 0 15px -4px rgba(254, 128, 25, 0.15), 
-              0 0 10px -4px rgba(250, 189, 47, 0.10);
+  box-shadow: 0 0 15px -4px rgba(119, 157, 179, 0.15), 
+              0 0 10px -4px rgba(132, 179, 142, 0.10);
   transform: translateY(-2px);
 }
 
