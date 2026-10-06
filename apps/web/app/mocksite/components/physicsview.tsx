@@ -13,7 +13,7 @@ export default function PhysicsView({className}: PhysicsViewProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = canvas.offsetWidth * 2 ;
+    canvas.width = canvas.offsetWidth * 2;
     canvas.height = canvas.offsetHeight * 2 ;
     
     ctx.beginPath();
