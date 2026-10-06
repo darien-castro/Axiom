@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -7,9 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: 'Space Grotesk', system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,74 +50,74 @@
 }
 
 :root {
-  /* Nord Light (Snow Storm) */
-  --background: #eceff4;
-  --foreground: #2e3440;
-  --card: #e5e9f0;
-  --card-foreground: #2e3440;
-  --popover: #e5e9f0;
-  --popover-foreground: #2e3440;
-  --primary: #5e81ac;
-  --primary-foreground: #eceff4;
-  --secondary: #d8dee9;
-  --secondary-foreground: #2e3440;
-  --muted: #d8dee9;
-  --muted-foreground: #4c566a;
-  --accent: #d8dee9;
-  --accent-foreground: #2e3440;
-  --destructive: #bf616a;
-  --border: #d8dee9;
-  --input: #d8dee9;
-  --ring: #81a1c1;
-  --chart-1: #8fbcbb;
-  --chart-2: #88c0d0;
-  --chart-3: #81a1c1;
-  --chart-4: #5e81ac;
-  --chart-5: #b48ead;
+  /* Gruvbox Light Mode */
+  --background: #fbf1c7;
+  --foreground: #3c3836;
+  --card: #f2e5bc;
+  --card-foreground: #3c3836;
+  --popover: #f2e5bc;
+  --popover-foreground: #3c3836;
+  --primary: #d65d0e;
+  --primary-foreground: #fbf1c7;
+  --secondary: #ebdbb2;
+  --secondary-foreground: #3c3836;
+  --muted: #ebdbb2;
+  --muted-foreground: #7c6f64;
+  --accent: #ebdbb2;
+  --accent-foreground: #d65d0e;
+  --destructive: #cc241d;
+  --border: #d5c4a1;
+  --input: #d5c4a1;
+  --ring: #d65d0e;
+  --chart-1: #cc241d;
+  --chart-2: #98971a;
+  --chart-3: #d79921;
+  --chart-4: #458588;
+  --chart-5: #b16286;
   --radius: 0.625rem;
-  --sidebar: #e5e9f0;
-  --sidebar-foreground: #2e3440;
-  --sidebar-primary: #5e81ac;
-  --sidebar-primary-foreground: #eceff4;
-  --sidebar-accent: #d8dee9;
-  --sidebar-accent-foreground: #2e3440;
-  --sidebar-border: #d8dee9;
-  --sidebar-ring: #81a1c1;
+  --sidebar: #fbf1c7;
+  --sidebar-foreground: #3c3836;
+  --sidebar-primary: #d65d0e;
+  --sidebar-primary-foreground: #fbf1c7;
+  --sidebar-accent: #ebdbb2;
+  --sidebar-accent-foreground: #d65d0e;
+  --sidebar-border: #d5c4a1;
+  --sidebar-ring: #d65d0e;
 }
 
 .dark {
-  /* Nord Dark (Polar Night) */
-  --background: #2e3440;
-  --foreground: #eceff4;
-  --card: #3b4252;
-  --card-foreground: #eceff4;
-  --popover: #3b4252;
-  --popover-foreground: #eceff4;
-  --primary: #88c0d0;
-  --primary-foreground: #2e3440;
-  --secondary: #434c5e;
-  --secondary-foreground: #eceff4;
-  --muted: #434c5e;
-  --muted-foreground: #d8dee9;
-  --accent: #434c5e;
-  --accent-foreground: #eceff4;
-  --destructive: #bf616a;
-  --border: #4c566a;
-  --input: #4c566a;
-  --ring: #81a1c1;
-  --chart-1: #8fbcbb;
-  --chart-2: #88c0d0;
-  --chart-3: #81a1c1;
-  --chart-4: #5e81ac;
-  --chart-5: #b48ead;
-  --sidebar: #3b4252;
-  --sidebar-foreground: #eceff4;
-  --sidebar-primary: #88c0d0;
-  --sidebar-primary-foreground: #2e3440;
-  --sidebar-accent: #434c5e;
-  --sidebar-accent-foreground: #eceff4;
-  --sidebar-border: #4c566a;
-  --sidebar-ring: #81a1c1;
+  /* Gruvbox Dark Mode (Warm, zero eye-strain) */
+  --background: #282828;
+  --foreground: #ebdbb2; /* Warm parchment text */
+  --card: #3c3836;
+  --card-foreground: #ebdbb2;
+  --popover: #3c3836;
+  --popover-foreground: #ebdbb2;
+  --primary: #fe8019; /* Gruvbox Orange */
+  --primary-foreground: #282828;
+  --secondary: #504945;
+  --secondary-foreground: #ebdbb2;
+  --muted: #3c3836;
+  --muted-foreground: #a89984;
+  --accent: #504945;
+  --accent-foreground: #fe8019;
+  --destructive: #fb4934;
+  --border: #504945;
+  --input: #504945;
+  --ring: #fe8019;
+  --chart-1: #fb4934; /* Bright Red */
+  --chart-2: #b8bb26; /* Bright Green */
+  --chart-3: #fabd2f; /* Bright Yellow */
+  --chart-4: #83a598; /* Bright Blue */
+  --chart-5: #d3869b; /* Bright Purple */
+  --sidebar: #3c3836;
+  --sidebar-foreground: #ebdbb2;
+  --sidebar-primary: #fe8019;
+  --sidebar-primary-foreground: #282828;
+  --sidebar-accent: #504945;
+  --sidebar-accent-foreground: #fe8019;
+  --sidebar-border: #504945;
+  --sidebar-ring: #fe8019;
 }
 
 @layer base {
@@ -139,15 +140,25 @@
   height: 100vh;
   width: 100vw;
 }
+
 .card {
   width: 10vw;
   display: flex;
   flex-direction: row;
   height: fit-content;
-  transition: width 1s ease;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
+
 .card:hover {
   width: 15vw;
+  border-color: var(--ring);
+  /* Muted, warm amber/orange glow */
+  box-shadow: 0 0 15px -4px rgba(254, 128, 25, 0.15), 
+              0 0 10px -4px rgba(250, 189, 47, 0.10);
+  transform: translateY(-2px);
 }
 
 @media (min-width: 14vw) {

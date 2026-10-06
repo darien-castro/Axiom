@@ -24,7 +24,7 @@ export default function Home() {
   const handleAction = (val: string) => {
     setInputValue(val); 
 
-    if (val === 'testing') {
+    if (val === 'mocksite') {
       setShowGif(true); 
 
       setTimeout(() => {
@@ -36,17 +36,12 @@ export default function Home() {
   }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 bg-background p-4 text-foreground">
-      
-      <div className="text-center">
-        <h1 className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-6xl font-extrabold tracking-tight text-transparent">
-          Axiom
-        </h1>
-      </div>
-      
-      <div className="w-[25vw] flex justify-center items-center">
-        <Separator/>
-      </div>
-      
+      <div className="dark bg-background  flex items-center justify-center p-8">
+        <h1 className="font-sans font-bold text-5xl md:text-7xl tracking-wider pb-4 
+             bg-gradient-to-r from-[#fb4934] via-[#fe8019] to-[#fabd2f] bg-clip-text text-transparent 
+             border-b-4 border-[#fe8019]/30 
+             drop-shadow-[0_0_15px_rgba(254,128,25,0.15)]">Axiom</h1>
+      </div>      
       <div>
         <Card className="group flex w-[320px] flex-row items-center overflow-hidden border border-border bg-card shadow-xl transition-all duration-500 ease-out hover:w-[450px]">
           <div className="min-w-[320px] shrink-0">
@@ -93,7 +88,7 @@ export default function Home() {
                     />
                   )
                 }
-                else if (!showGif && inputValue !== '' && inputValue !== 'testing') {
+                else if (!showGif && inputValue !== '' && inputValue !== 'mocksite') {
                   return (
                     <Image 
                       key={`failed-gif-${inputValue}`} // Using inputValue in key forces restart when they try again
