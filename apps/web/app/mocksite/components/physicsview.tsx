@@ -1,7 +1,28 @@
 'use client';
-import { cn } from "@/lib/utils" 
+import { cn } from "@/lib/utils"
+import { Engine } from "./engine"
+import { physNode } from "./engine"
+
+interface Course {
+  name: string;
+  credits: number;
+  assignments: Assignment[];
+}
+
+interface Assignment {
+  name: string;
+  weight: number;
+}
 
 import { useRef, useEffect } from 'react';
+// Add some mock data at the top of your file
+const MOCK_COURSES: Course[] = [
+  { name: "MATH 2164", credits: 3, assignments: [] },
+  { name: "ITCS 2181", credits: 4, assignments: [] },
+  { name: "ITSC 2100", credits: 3, assignments: [] },
+  { name: "ENGL 1102", credits: 3, assignments: [] },
+  { name: "PHYS 2101", credits: 4, assignments: [] },
+];
 
 export default function PhysicsView({className}: PhysicsViewProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -13,49 +34,28 @@ export default function PhysicsView({className}: PhysicsViewProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = canvas.offsetWidth * 2;
-    canvas.height = canvas.offsetHeight * 2 ;
-    
-    ctx.beginPath();
-    ctx.arc(300,100,30,0,2 *Math.PI)
-    ctx.strokeStyle = "#ad5c63";
-    ctx.lineWidth = 60;
-    ctx.stroke();
-    ctx.font = "24px serif"
-    ctx.fillStyle = "#ffffff"
-    ctx.fillText("MATH 2164", 230, 185)
+    // Fix Canvas DPI scaling for sharp text
+    canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+    canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    ctx.beginPath();
-    ctx.arc(600,300,30,0,2 *Math.PI)
-    ctx.strokeStyle = "blue";
-    ctx.lineWidth = 60;
-    ctx.stroke();
-    ctx.font = "24px serif"
-    ctx.fillStyle = "#ffffff"
-    ctx.fillText("ITCS 2181", 540, 390)
+    // Pass the actual CSS width/height to the engine, not the multiplied resolution
+    const engine = new Engine(0.005, { width: canvas.offsetWidth, height: canvas.offsetHeight }, ctx);
 
-    ctx.beginPath();
-    ctx.arc(1100,300,30,0,2 *Math.PI)
-    ctx.strokeStyle = "green";
-    ctx.lineWidth = 60;
-    ctx.stroke();
-    ctx.font = "24px serif"
-    ctx.fillStyle = "#ffffff"
-    ctx.fillText("ITSC 2100", 1035, 385)
+    // Add the mock data
+    for (const course of MOCK_COURSES) {
+       engine.addNode(new physNode(course));
+    }
 
+    engine.start();
 
-    ctx.beginPath();
-    ctx.arc(1500,500,30,0,2 *Math.PI)
-    ctx.strokeStyle = "green";
-    ctx.lineWidth = 60;
-    ctx.stroke();
-    ctx.font = "24px serif"
-    ctx.fillStyle = "#ffffff"
-    ctx.fillText("ITSC 2100", 1440, 590)
-
+    // CRITICAL: Cleanup the animation when React unmounts
+    return () => {
+       engine.stop();
+    }
   }, []);
 
   return (
-      <canvas ref={canvasRef} className={cn(className)}></canvas>
+      <canvas ref={canvasRef} className={cn(className, "w-full h-full bg-black")}></canvas>
   );
 }
