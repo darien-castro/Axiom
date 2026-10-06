@@ -1,4 +1,6 @@
+"use client"
 import * as React from "react"
+import { usePathname } from 'next/navigation';
 import Link from "next/link"
 import {
   NavigationMenu,
@@ -49,6 +51,7 @@ const components: { title: string; href: string; description: string }[] = [
 ]
 
 export default function NavigationMenuDemo() {
+ const pathname = usePathname();
   return (
     <NavigationMenu>
       <NavigationMenuList>
@@ -56,13 +59,13 @@ export default function NavigationMenuDemo() {
           <NavigationMenuTrigger>Home</NavigationMenuTrigger>
         </NavigationMenuItem>
         <NavigationMenuItem className="hidden md:flex">
-          <NavigationMenuTrigger>Components</NavigationMenuTrigger>
+          <NavigationMenuTrigger>Courses</NavigationMenuTrigger>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <NavigationMenuTrigger>With Icon</NavigationMenuTrigger>
+          <NavigationMenuTrigger>Outlook</NavigationMenuTrigger>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <NavigationMenuLink className={navigationMenuTriggerStyle()} render={<Link href="/docs">Docs</Link>} />
+        <NavigationMenuTrigger>More</NavigationMenuTrigger>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>
