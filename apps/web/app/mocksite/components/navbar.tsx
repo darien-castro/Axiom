@@ -62,10 +62,10 @@ export default function NavigationMenuDemo() {
           <NavigationMenuTrigger>Courses</NavigationMenuTrigger>
         </NavigationMenuItem>
         <NavigationMenuItem>
-          <NavigationMenuTrigger>Outlook</NavigationMenuTrigger>
+          <NavigationMenuTrigger>Career Outlook</NavigationMenuTrigger>
         </NavigationMenuItem>
         <NavigationMenuItem>
-        <NavigationMenuTrigger>More</NavigationMenuTrigger>
+        <NavigationMenuTrigger>Settings</NavigationMenuTrigger>
         </NavigationMenuItem>
       </NavigationMenuList>
     </NavigationMenu>

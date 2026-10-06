@@ -6,7 +6,7 @@ import mapper from './mapper/mapper';
 import courseService from './services/courseService';
 import engineService from './services/engineService';
 import crypto from './crypto/crypto';
-import mockClient front './client/mockclient.ts'
+import mockClient from './client/mockclient.ts'
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,7 +22,6 @@ app.get('/healthz', (_req: Request, res: Response) => {
 const apiKey: string = returnAPIKey();
 const classTest: CanvasClient = new Canvas_API('https://instructure.charlotte.edu', apiKey);
 
-/*
 export async function printEverything(): Promise<void> {
   console.log("============= Courses ==================");
   const courses = await classTest.GetCourses();
@@ -43,12 +42,6 @@ export async function printEverything(): Promise<void> {
   console.log(cleanUserInfo); 
   const testCourseCode = '265289';
 
-  try {
-    const courseAssignments = await classTest.GetCourseSubmissions(testCourseCode);
-    console.log(courseAssignments);
-  } catch (error) {
-    console.error('Failed to get course submissions:', error);
-  }
 }
 
 export async function testService(): Promise<void> {
@@ -58,16 +51,9 @@ export async function testService(): Promise<void> {
     console.error('testService failed:', error);
   }
 }
-testService();
-*/
 
 
-app.get('/api/mock/courses', (req : Request, res: Response) => {
-    const mockCourses = mockClient.getCourses();
-    return res.status(200).json(mockCourses);
-});
-
-
+printEverything();
 
 export { app, classTest, crypto };
 export default app;

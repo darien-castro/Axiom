@@ -19,9 +19,10 @@ interface AssignmentCardMembers {
   badgeText: string
   badgeVariant?: "default" | "destructive" | "outline" | "secondary"
   className?: string
+  duedate: string
 } 
 
-export default function AssignmentCard({classID, description, affect, time, badgeText, badgeVariant, className, ...props }: AssignmentCardMembers) {
+export default function AssignmentCard({classID, description, affect, time, badgeText, badgeVariant, className, duedate, ...props }: AssignmentCardMembers) {
   return (
     <Card className={cn(className)}>
       <CardHeader>
@@ -32,12 +33,19 @@ export default function AssignmentCard({classID, description, affect, time, badg
         {description}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ul>
-          <li>{affect} of overall grade</li>
-          <li>{time}</li>
-        </ul>
-      </CardContent>
+        <CardContent>
+        <div className="flex flex-row gap-20">
+        <div>
+          <ul>
+            <li>{affect} of overall grade</li>
+            <li>{time}</li>
+          </ul>
+        </div>
+        <div className="flex flex-end w-fit h-fill flex-end justify-end items-end">
+          <p>due tuesday 27th</p>
+        </div>
+        </div>
+        </CardContent>
       <CardFooter>
           <Badge variant={badgeVariant}>
           {badgeText}
