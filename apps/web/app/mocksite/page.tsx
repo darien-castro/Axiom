@@ -1,9 +1,10 @@
 import AssignmentCard from './components/AssignmentCard'
 import ChartAreaInteractive from './components/mockChart'
+import PhysicsView from './components/physicsview.tsx'
 
 const MOCK_ASSIGNMENTS = [
-  { classID: "ITSC 2081", description: "Architecture Lab", affect: "Affect 5%", time: "5 Hours", badgeText: "Heavy", badgeVariant: "destructive" as const },
-  { classID: "MATH 1241", description: "Calculus Homework 3", affect: "Affect 2%", time: "50 Minutes", badgeText: "Light", badgeVariant: "secondary" as const },
+  { classID: "ITSC 2081", description: "Architecture Lab", affect: "Affect 5%", time: "5 Hours", badgeText: "Heavy", badgeVariant: "destructive", duedate: "tuesday 27th" as const },
+  { classID: "MATH 1241", description: "Calculus Homework 3", affect: "Affect 2%", time: "50 Minutes", badgeText: "Light", badgeVariant: "secondary",duedate: "tuesday 27th" as const },
   { classID: "ENGL 1102", description: "Rhetorical Analysis Essay", affect: "Affect 15%", time: "6 Hours", badgeText: "Heavy", badgeVariant: "destructive" as const },
   { classID: "PHYS 2101", description: "Kinematics Quiz", affect: "Affect 10%", time: "45 Minutes", badgeText: "Medium", badgeVariant: "default" as const },
   { classID: "HIST 1151", description: "Chapter 4 Reading", affect: "Affect 1%", time: "30 Minutes", badgeText: "Light", badgeVariant: "secondary" as const },
@@ -50,8 +51,9 @@ export default function Page() {
           <div>
             <ChartAreaInteractive></ChartAreaInteractive>
           </div>
-          <div className="flex justify-center items-center w-[100%] h-[90%] bg-card rounded-2xl mt-5">
-            <h1 className="text-white font-bolder font-stretch-expanded tracking-[5px] border-[5] p-15">Hello World</h1>
+          <div className="flex justify-center items-center bg-black rounded-2xl mt-5 h-full w-full">
+            <PhysicsView className="w-full h-full"></PhysicsView>
+
           </div>
         </div>
 

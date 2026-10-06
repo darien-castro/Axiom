@@ -38,7 +38,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 bg-background p-4 text-foreground">
       <div className="dark bg-background  flex items-center justify-center p-8">
         <h1 className="font-sans font-bold text-5xl md:text-7xl tracking-wider pb-4 
-             bg-gradient-to-r from-[#fb4934] via-[#fe8019] to-[#fabd2f] bg-clip-text text-transparent 
+             bg-gradient-to-r from-[#84b38e] via-[#c4a7e7] to-[#191724] bg-clip-text text-transparent 
              border-b-4 border-[#fe8019]/30 
              drop-shadow-[0_0_15px_rgba(254,128,25,0.15)]">Axiom</h1>
       </div>      
