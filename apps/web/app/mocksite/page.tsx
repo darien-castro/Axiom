@@ -29,11 +29,11 @@ export default function Page() {
   return (
     <div className="flex w-full justify-around bg-background mt-5">
       <div className="flex flex-row w-[90vw] h-[90vh] gap-10 justify-center items-center rounded-2xl">
-        
-        <div className="flex flex-col w-[30%] h-[90%] max-h-[90%] rounded-2xl border border-border bg-card/40 p-8 shadow-sm overflow-y-auto gap-6 no-scrollbar"> 
-          
+
+        <div className="flex flex-col w-[30%] h-[90%] max-h-[90%] rounded-2xl border border-border bg-card/40 p-8 shadow-sm overflow-y-auto gap-6 no-scrollbar">
+
           {MOCK_ASSIGNMENTS.map((assignment, index) => (
-            <AssignmentCard 
+            <AssignmentCard
               key={index}
               classID={assignment.classID}
               description={assignment.description}
@@ -41,7 +41,7 @@ export default function Page() {
               time={assignment.time}
               badgeText={assignment.badgeText}
               badgeVariant={assignment.badgeVariant}
-              className="shrink-0 shadow-lg hover:scale-105 transition-transform" 
+              className="shrink-0 shadow-lg hover:scale-105 transition-transform"
             />
           ))}
 
@@ -52,7 +52,7 @@ export default function Page() {
             <ChartAreaInteractive></ChartAreaInteractive>
           </div>
           <div className="flex justify-center items-center bg-black rounded-2xl mt-5 h-full w-full">
-            <PhysicsView className="w-full h-full"></PhysicsView>
+            <PhysicsView className="w-full h-full rounded-2xl"></PhysicsView>
 
           </div>
         </div>
