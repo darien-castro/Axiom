@@ -6,7 +6,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 flex w-full justify-center border-b border-border bg-background/95 p-[1vh] backdrop-blur">
         <NavigationMenuDemo />
       </header>
-      <main className="flex-1 w-full h-full ">
+      <main className="flex flex-1 h-full w-full">
         {children}
       </main>
     </div>
