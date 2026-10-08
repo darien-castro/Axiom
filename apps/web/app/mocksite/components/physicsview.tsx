@@ -6,6 +6,7 @@ import { physNode } from "./engine"
 interface Course {
   name: string;
   credits: number;
+  gradeLow: boolean;
   assignments: Assignment[];
 }
 
@@ -14,14 +15,21 @@ interface Assignment {
   weight: number;
 }
 
+function getMouseInput(canvas: HTMLCanvasElement, evt: MouseEvent) {
+  const rect = canvas.getBoundingClientRect();
+  const x = evt.clientX - rect.left;
+  const y = evt.clientY - rect.top;
+  return { x, y };
+}
+
+
 import { useRef, useEffect } from 'react';
-// Add some mock data at the top of your file
 const MOCK_COURSES: Course[] = [
-  { name: "MATH 2164", credits: 3, assignments: [] },
-  { name: "ITCS 2181", credits: 4, assignments: [] },
-  { name: "ITSC 2100", credits: 3, assignments: [] },
-  { name: "ENGL 1102", credits: 3, assignments: [] },
-  { name: "PHYS 2101", credits: 4, assignments: [] },
+  { name: "MATH 2164", credits: 3, gradeLow: false, assignments: []},
+  { name: "ITCS 2181", credits: 4, gradeLow: true, assignments: [] },
+  { name: "ITSC 2100", credits: 3, gradeLow: true, assignments: [] },
+  { name: "ENGL 1102", credits: 3, gradeLow: false, assignments: [] },
+  { name: "PHYS 2101", credits: 4, gradeLow: false, assignments: [] },
 ];
 
 export default function PhysicsView({className}: PhysicsViewProps) {
@@ -34,28 +42,39 @@ export default function PhysicsView({className}: PhysicsViewProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Fix Canvas DPI scaling for sharp text
     canvas.width = canvas.offsetWidth * window.devicePixelRatio;
     canvas.height = canvas.offsetHeight * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    // Pass the actual CSS width/height to the engine, not the multiplied resolution
+
     const engine = new Engine(0.005, { width: canvas.offsetWidth, height: canvas.offsetHeight }, ctx);
 
-    // Add the mock data
+
     for (const course of MOCK_COURSES) {
        engine.addNode(new physNode(course));
     }
 
     engine.start();
 
-    // CRITICAL: Cleanup the animation when React unmounts
+    const handleMouseMove = (evt: MouseEvent) => {
+      const mousePos = getMouseInput(canvas, evt);
+
+      if (engine.setMousePos) {
+        if (evt.buttons === 1) {
+          engine.setMousePos({ ...mousePos, clicked: true });
+        } else {
+          engine.setMousePos({ ...mousePos, clicked: false });
+        }
+      }
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+
     return () => {
        engine.stop();
     }
   }, []);
 
   return (
-      <canvas ref={canvasRef} className={cn(className, "w-full h-full bg-black")}></canvas>
-  );
+      <canvas ref={canvasRef} className={cn(className, "w-full h-full bg-[#32364A]")}></canvas>);
 }
