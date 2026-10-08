@@ -51,9 +51,9 @@ export default function Page() {
           <div>
             <ChartAreaInteractive></ChartAreaInteractive>
           </div>
-          <div className="flex justify-center items-center bg-black rounded-2xl mt-5 h-full w-full">
-            <PhysicsView className="w-full h-full rounded-2xl"></PhysicsView>
-
+          <div className="flex flex-col justify-center items-center bg-black rounded-2xl mt-5 h-full w-full">
+              <div className="bg-card shadow-lg w-full flex justify-center items-center h-10 rounded-t-2xl rounded-b-none"><h1 className="text-sm color-card-foreground">Graph View</h1></div>
+              <PhysicsView className="w-full h-full rounded-2xl"></PhysicsView>
           </div>
         </div>
 
