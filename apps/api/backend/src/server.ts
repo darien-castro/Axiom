@@ -3,10 +3,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { CanvasClient, Canvas_API } from './client/canvasclient';
 import mapper from './mapper/mapper';
-import courseService from './services/courseService';
-import engineService from './services/engineService';
 import crypto from './crypto/crypto';
-import mockClient from './client/mockclient.ts'
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,13 +29,13 @@ export async function printEverything(): Promise<void> {
   console.log("============= Course Grades ================");
   const courseGrades = await classTest.GetCourseGrades();
   const cleanCourseGrades = mapper.cleanCourseGrades(courseGrades);
-  console.log(cleanCourseGrades); 
+  console.log(cleanCourseGrades);
   console.log("\n\n\n");
 
   console.log("============= User information ================");
   const userInfo = await classTest.GetUserInformation();
   const cleanUserInfo = mapper.cleanUserInformation(userInfo);
-  console.log(cleanUserInfo); 
+  console.log(cleanUserInfo);
   const testCourseCode = '265289';
 
 }
@@ -54,12 +51,11 @@ export async function testService(): Promise<void> {
 // printEverything();
 
 // api stuff
-//
 
-app.use(cors({ origin: 'http://localhost:3001' })); 
+app.use(cors({ origin: 'http://localhost:3001' }));
 
 app.get("/", (req, res) => {
-    res.send("Hello from Express server!");
+    res.send("Connection Successful!");
 });
 
 app.listen(PORT, () => {
