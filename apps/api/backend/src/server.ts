@@ -18,40 +18,6 @@ const apiKey = process.env.CANVAS_API_KEY;
 if (!apiKey) throw new Error('CANVAS_API_KEY is not set');
 const classTest: CanvasClient = new Canvas_API('https://instructure.charlotte.edu', apiKey);
 
-export async function printEverything(): Promise<void> {
-  console.log("============= Courses ==================");
-  const courses = await classTest.GetCourses();
-  const cleanCourses = mapper.cleanCourses(courses);
-  console.log(cleanCourses);
-
-  console.log("\n\n\n");
-
-  console.log("============= Course Grades ================");
-  const courseGrades = await classTest.GetCourseGrades();
-  const cleanCourseGrades = mapper.cleanCourseGrades(courseGrades);
-  console.log(cleanCourseGrades);
-  console.log("\n\n\n");
-
-  console.log("============= User information ================");
-  const userInfo = await classTest.GetUserInformation();
-  const cleanUserInfo = mapper.cleanUserInformation(userInfo);
-  console.log(cleanUserInfo);
-  const testCourseCode = '265289';
-
-}
-
-export async function testService(): Promise<void> {
-  try {
-    await CanvasClient.getRequest()
- } catch (error) {
-    console.error('testService failed:', error);
-  }
-}
-
-// printEverything();
-
-// api stuff
-
 app.use(cors({ origin: 'http://localhost:3001' }));
 
 app.get("/", (req, res) => {
