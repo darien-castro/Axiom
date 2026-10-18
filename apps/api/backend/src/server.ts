@@ -28,8 +28,8 @@ if (!apiKey) throw new Error('CANVAS_API_KEY is not set');
 const classTest: CanvasClient = new Canvas_API('https://instructure.charlotte.edu');
 
 
-
-//app.use(cors({ origin: 'http://localhost:3001' }));
+// ideally, once released, would only allow access from one server
+app.use(cors());
 
 // main routes
 app.get("/", (req, res) => {
