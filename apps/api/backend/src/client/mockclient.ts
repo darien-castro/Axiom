@@ -39,7 +39,8 @@ export class MockCanvasClient extends CanvasClient {
     };
   }
 
-  override async GetCourseGrades(): Promise<CanvasEnrollment[]> {
+  // quick fix, need to look at more later
+  async GetCourseGrades(): Promise<CanvasEnrollment[]> {
     return [
       {
         course_id: 265289,

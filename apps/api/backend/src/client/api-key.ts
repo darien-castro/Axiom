@@ -7,5 +7,4 @@ export function myKey(): string {
   }
   return apiKey;
 }
-
 export default { myKey };
