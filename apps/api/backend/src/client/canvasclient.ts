@@ -22,6 +22,10 @@ export interface CanvasCourse {
   [key: string]: unknown;
 }
 
+export interface CanvasEnrollment{
+
+}
+
 export interface CanvasAssignment {
   id: number | string;
   course_id: number | string;
@@ -49,11 +53,29 @@ export class CanvasClient {
   public m_baseURL: string;
   public m_apiKey: string;
 
-  constructor(baseURL: string, apiKey: string) {
+  constructor(baseURL: string, apiKey = '') {
     this.m_baseURL = baseURL.replace(/\/+$/, '');
     this.m_apiKey = apiKey;
   }
-
+  async verifyKey(apiKey: string): Promise<boolean> {
+    if (!apiKey || apiKey === '') { return false; }
+    try {
+      const response = await fetch(`${this.m_baseURL}/users/self`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        }
+      })
+      if (response.status === 200) {
+        this.m_apiKey = apiKey;
+        return true;
+      }
+      return false;
+    }
+    catch (error) {
+      return false;
+    }
+  }
   async GetRequest<T = any>(apiCall: string): Promise<T> {
     const endpoint = `${this.m_baseURL}${apiCall.startsWith('/') ? '' : '/'}${apiCall}`;
     try {
@@ -63,11 +85,10 @@ export class CanvasClient {
           Authorization: `Bearer ${this.m_apiKey}`,
         },
       });
-
       if (!response.ok) {
-        throw new Error(`Response Error Status: ${response.status} (${response.statusText})`);
+        const errorBody = await response.text().catch(() => 'No error body');
+        throw new Error(`Response Error Status: ${response.status} (${response.statusText}), at ${apiCall}: ${errorBody}`);
       }
-
       const result = (await response.json()) as T;
       return result;
     } catch (error) {
@@ -90,11 +111,13 @@ export class CanvasClient {
     return this.GetRequest<CanvasCourse>(apiEndpoint);
   }
 
+  // causing problems on branch
+  /*
   async GetCourseGrades(): Promise<CanvasEnrollment[]> {
     const apiEndpoint = '/api/v1/users/self/enrollments';
     return this.GetRequest<CanvasEnrollment[]>(apiEndpoint);
   }
-
+  */
   async GetCourseGrade(courseID: string | number): Promise<CanvasCourse> {
     const apiEndpoint = `/api/v1/courses/${courseID}`;
     return this.GetRequest<CanvasCourse>(apiEndpoint);
