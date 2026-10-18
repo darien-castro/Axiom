@@ -13,6 +13,7 @@ import verifyRoute from './routes/verify'
 import coursesRoute from './routes/courses'
 import courseRoute from './routes/course'
 import assignmentsRoute from './routes/assignments'
+import submissionsRoute from './routes/submissions'
 
 
 
@@ -41,6 +42,7 @@ app.use('/api', verifyRoute);
 app.use('/api', coursesRoute);
 app.use('/api', courseRoute);
 app.use('/api', assignmentsRoute);
+app.use('/api', submissionsRoute)
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
