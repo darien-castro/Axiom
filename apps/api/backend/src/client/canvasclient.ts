@@ -124,7 +124,7 @@ export class CanvasClient {
   }
 
   async GetCourseAssignments(courseID: string | number): Promise<CanvasAssignment[]> {
-    const apiEndpoint = `/api/v1/courses/${courseID}/assignments`;
+    const apiEndpoint = `/api/v1/courses/${courseID}/assignments?per_page=100`; // testing
     return this.GetRequest<CanvasAssignment[]>(apiEndpoint);
   }
 
