@@ -4,26 +4,19 @@
 // then switch to db mode, and just grab from db
 
 import { Router } from 'express';
-import { CanvasClient, Canvas_API } from '../client/canvasclient';
-import mapper from '../mapper/mapper'
+import routeService, { CleanCourse } from '../services/routeService';
 const router = Router();
-
-
 
 router.post('/courses', async (_req, res) => {
   const { apiKey } = _req.body;
-  const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
-    if (validKey === true) {
-      const courses = await canvasClientInstance.GetCourses();
-      const cleanCourses = mapper.cleanCourses(courses);
-       res.send({ cleanCourses });
+    const cleanCourses: CleanCourse[] | null = await routeService.userRequestedCoursesRoute(apiKey);
+    if (!cleanCourses) {
+      res.status(500).json({ error: 'Error: Invalid API Key' });
+      return;
     }
-    else {
-      res.status(500).json(`Error: Invalid API Key`);
-    }
-    } catch (error) {
+    res.send({ cleanCourses });
+  } catch (error) {
     res.status(500).json({ error: `${error}` });
   }
 });

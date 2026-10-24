@@ -2,28 +2,22 @@
 // /api/courses/:courseID/:assignmentID
 
 import { Router } from 'express';
-import { CanvasClient, Canvas_API } from '../client/canvasclient';
-import mapper from '../mapper/mapper'
+import routeService, { CanvasAssignment } from '../services/routeService';
 const router = Router();
-
-
 
 router.post('/courses/:courseID/:assignmentID', async (_req, res) => {
   const { apiKey } = _req.body;
-  const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
+  const courseID = _req.params['courseID'];
+  const assignmentID = _req.params['assignmentID'];
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
-    if (validKey === true) {
-      const courseID = _req.params['courseID'];
-      const assignmentID = _req.params['assignmentID'];
-      const assignments = await canvasClientInstance.GetCourseAssignment(courseID, assignmentID);
-      // TODO don't have assignment cleaner individually
-       res.send({ assignments });
+    const assignments: CanvasAssignment | null = await routeService.userRequestedAssignmentRoute(apiKey, courseID, assignmentID);
+    if (!assignments) {
+      res.status(500).json({ error: 'Error: Invalid API Key' });
+      return;
     }
-    else {
-      res.status(500).json(`Error: Invalid API Key`);
-    }
-    } catch (error) {
+    // TODO don't have assignment cleaner individually
+    res.send({ assignments });
+  } catch (error) {
     res.status(500).json({ error: `${error}` });
   }
 });

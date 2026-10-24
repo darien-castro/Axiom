@@ -106,7 +106,7 @@ export class DatabaseService {
         VALUES ($1, $2, $3)
         ON CONFLICT (userID) DO NOTHING`;
       const values = [
-        crypto.sha256(userInfoJSON.userID),
+        userInfoJSON.userID,
         userInfoJSON.firstName,
         userInfoJSON.lastName,
       ];
@@ -156,11 +156,20 @@ export class DatabaseService {
     }
   }
 
-  async getUserInfo(userID: string): Promise<any[]> {
+  async getUserInfo(userID: string): Promise<UserInfo> {
     const { rows } = await db.query('SELECT * FROM Users WHERE userID = $1', [
-      crypto.sha256(userID),
+      userID,
     ]);
-    return rows;
+    const user = rows[0];
+    if (!user) {
+      throw new Error(`User with ID ${userID} not found in database`);
+    }
+    const retUserInfo: UserInfo = {
+      userID: user.userID?.toString() ?? userID,
+      firstName: user.first_name,
+      lastName: user.last_name
+    }
+    return retUserInfo;
   }
 
   async getCourseInformation(courseID: string): Promise<any[]> {
@@ -183,7 +192,7 @@ export class DatabaseService {
       const query = `
         INSERT INTO Updates (userID, updated_at)
         VALUES ($1, $2)`;
-      const values = [crypto.sha256(userID), new Date()];
+      const values = [userID, new Date()];
       await db.query(query, values);
     } catch (error) {
       console.error(`Error Syncing Database: ${error}`);
@@ -197,7 +206,7 @@ export class DatabaseService {
        WHERE userID = $1
        ORDER BY updated_at DESC
        LIMIT 1`,
-      [crypto.sha256(userID)]
+      [userID]
     );
     const row = rows[0];
     if (!row || !row.updated_at) {

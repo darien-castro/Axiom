@@ -13,6 +13,7 @@ import verifyRoute from './routes/verify'
 import coursesRoute from './routes/courses'
 import courseRoute from './routes/course'
 import assignmentsRoute from './routes/assignments'
+import assignmentRoute from './routes/assignment'
 import submissionsRoute from './routes/submissions'
 import selfRoute from './routes/me'
 
@@ -39,11 +40,12 @@ app.use('/api', verifyRoute);
 app.use('/api', coursesRoute);
 app.use('/api', courseRoute);
 app.use('/api', assignmentsRoute);
+app.use('/api', assignmentRoute);
 app.use('/api', submissionsRoute)
 app.use('/api', selfRoute)
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-export { app, classTest, crypto };
+export { app, crypto };
 export default app;
