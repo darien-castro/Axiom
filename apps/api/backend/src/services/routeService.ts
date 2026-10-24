@@ -23,10 +23,51 @@ export type {
 
 const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
 
+export async function ensureUser(apiKey: string): Promise<boolean> {
+  try {
+    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const now: Date = new Date();
+
+    if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+      try {
+        const userInfo = await db.getUserInfo(apiKey);
+        if (userInfo) {
+          canvasClientInstance.m_apiKey = apiKey;
+          return true;
+        }
+      } catch (error) {
+        // Not found in DB, fallback to Canvas verification
+      }
+    }
+  } catch (error) {
+    // Database check failed, proceed with Canvas verification
+  }
+
+  const validKey = await canvasClientInstance.verifyKey(apiKey);
+  if (validKey === true) {
+    try {
+      // Get from Canvas then push to DB
+      const me = await canvasClientInstance.GetUserInformation();
+      const cleanMe = mapper.cleanUserInformation(me);
+      const userInfo: UserInfo = {
+        userID: apiKey, // TODO encrypt
+        firstName: cleanMe.firstName,
+        lastName: cleanMe.lastName,
+      };
+
+      await db.pushGeneralUserInfo(userInfo);
+      await db.syncUpdate(apiKey); // TODO encrypt
+    } catch (err) {
+      console.error('Error fetching or storing user info:', err);
+    }
+    return true;
+  }
+  return false;
+}
+
 export async function userRequestedVerifyRoute(apiKey: string): Promise<boolean> {
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
-    return validKey;
+    return await ensureUser(apiKey);
   } catch (error) {
     throw error;
   }
@@ -34,10 +75,28 @@ export async function userRequestedVerifyRoute(apiKey: string): Promise<boolean>
 
 export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCourse[] | null> {
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const now: Date = new Date();
+
+    if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+      try {
+        const dbCourses = await db.getUserCourses(apiKey);
+        if (dbCourses && dbCourses.length > 0) {
+          canvasClientInstance.m_apiKey = apiKey;
+          return dbCourses;
+        }
+      } catch (error) {
+        // Fallback to Canvas
+      }
+    }
+
+    const validKey = await ensureUser(apiKey);
     if (validKey === true) {
       const courses = await canvasClientInstance.GetCourses();
       const cleanCourses = mapper.cleanCourses(courses);
+      await db.pushCourseInformation(cleanCourses);
+      await db.pushUserCourses(apiKey, cleanCourses.map((c) => c.courseID));
+      await db.syncUpdate(apiKey);
       return cleanCourses;
     } else {
       return null;
@@ -52,9 +111,40 @@ export async function userRequestedCourseRoute(
   courseID: string
 ): Promise<CanvasCourse | null> {
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const now: Date = new Date();
+
+    if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+      try {
+        const dbCourseRows = await db.getCourseInformation(courseID);
+        if (dbCourseRows && dbCourseRows.length > 0) {
+          canvasClientInstance.m_apiKey = apiKey;
+          const row = dbCourseRows[0];
+          return {
+            id: row.courseid,
+            name: row.course_name,
+            course_code: row.course_code || row.course_section,
+          };
+        }
+      } catch (error) {
+        // Fallback to Canvas
+      }
+    }
+
+    const validKey = await ensureUser(apiKey);
     if (validKey === true) {
       const course = await canvasClientInstance.GetCourseData(courseID);
+      if (course) {
+        await db.pushCourseInformation([
+          {
+            courseID: String(course.id),
+            courseName: course.name,
+            courseCode: course.course_code,
+          },
+        ]);
+        await db.pushUserCourses(apiKey, [String(course.id)]);
+      }
+      await db.syncUpdate(apiKey);
       return course;
     } else {
       return null;
@@ -69,10 +159,33 @@ export async function userRequestedAssignmentsRoute(
   courseID: string
 ): Promise<CleanCourseAssignment[] | null> {
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const now: Date = new Date();
+
+    if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+      try {
+        const dbAssignments = await db.getAssignments(courseID);
+        if (dbAssignments && dbAssignments.length > 0) {
+          canvasClientInstance.m_apiKey = apiKey;
+          return dbAssignments.map((a: any) => ({
+            courseId: a.courseid || courseID,
+            assignmentName: a.name,
+            assignmentType: a.type,
+            assignmentPoints:
+              a.points !== null && a.points !== undefined ? Number(a.points) : null,
+          }));
+        }
+      } catch (error) {
+        // Fallback to Canvas
+      }
+    }
+
+    const validKey = await ensureUser(apiKey);
     if (validKey === true) {
       const assignments = await canvasClientInstance.GetCourseAssignments(courseID);
       const cleanAssignments = mapper.cleanCourseAssignments(assignments);
+      await db.pushAssignments(courseID, assignments);
+      await db.syncUpdate(apiKey);
       return cleanAssignments;
     } else {
       return null;
@@ -88,9 +201,37 @@ export async function userRequestedAssignmentRoute(
   assignmentID: string
 ): Promise<CanvasAssignment | null> {
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const now: Date = new Date();
+
+    if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+      try {
+        const dbAssignment = await db.getAssignment(assignmentID);
+        if (dbAssignment) {
+          canvasClientInstance.m_apiKey = apiKey;
+          return {
+            id: dbAssignment.assignmentid || assignmentID,
+            course_id: dbAssignment.courseid || courseID,
+            name: dbAssignment.name,
+            grading_type: dbAssignment.type,
+            points_possible:
+              dbAssignment.points !== null && dbAssignment.points !== undefined
+                ? Number(dbAssignment.points)
+                : null,
+          };
+        }
+      } catch (error) {
+        // Fallback to Canvas
+      }
+    }
+
+    const validKey = await ensureUser(apiKey);
     if (validKey === true) {
       const assignment = await canvasClientInstance.GetCourseAssignment(courseID, assignmentID);
+      if (assignment) {
+        await db.pushAssignments(courseID, [assignment]);
+      }
+      await db.syncUpdate(apiKey);
       return assignment;
     } else {
       return null;
@@ -102,12 +243,37 @@ export async function userRequestedAssignmentRoute(
 
 export async function userRequestedSubmissionsRoute(
   apiKey: string,
-  courseID: string
+  courseID: string,
+  assignmentID: string
 ): Promise<CanvasSubmission[] | null> {
   try {
-    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const now: Date = new Date();
+
+    if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+      try {
+        const dbSubmissions = await db.getSubmissions(courseID, apiKey);
+        if (dbSubmissions && dbSubmissions.length > 0) {
+          canvasClientInstance.m_apiKey = apiKey;
+          return dbSubmissions.map((s: any) => ({
+            id: s.submissionid,
+            assignment_id: s.assignmentid,
+            course_id: s.courseid,
+            score: s.score !== null && s.score !== undefined ? Number(s.score) : null,
+            grade: s.grade,
+            submitted_at: s.submitted_at,
+          }));
+        }
+      } catch (error) {
+        // Fallback to Canvas
+      }
+    }
+
+    const validKey = await ensureUser(apiKey);
     if (validKey === true) {
       const submissions = await canvasClientInstance.GetCourseSubmissions(courseID);
+      await db.pushSubmissions(courseID, apiKey, submissions);
+      await db.syncUpdate(apiKey);
       return submissions;
     } else {
       return null;
@@ -120,49 +286,47 @@ export async function userRequestedSubmissionsRoute(
 export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | null> {
   try {
     // TODO sessions: encrypt api key here using encryption method (probably using other crypto/session service)
-    //
+    try {
+      const lastUpdate: Date | null = await db.lastUpdated(apiKey); // encrypt
+      const now: Date = new Date();
+      if (!isGreaterThan20MinsApart(now, lastUpdate)) {
+        // less than 20 minutes old, get from db
+        try {
+          const userInfo = await db.getUserInfo(apiKey); // TODO encrypted key
+          if (userInfo) {
+            canvasClientInstance.m_apiKey = apiKey;
+            return userInfo;
+          }
+        } catch (error) {
+          // not found in db, fallback to canvas
+        }
+      }
+    } catch (error) {
+      // db error, fallback to canvas
+    }
+
     const validKey = await canvasClientInstance.verifyKey(apiKey);
 
     if (validKey === true) {
+      // get from canvas then push to db
+      const me = await canvasClientInstance.GetUserInformation();
+      const cleanMe = mapper.cleanUserInformation(me);
+      const userInfo: UserInfo = {
+        userID: apiKey, // TODO encrypt
+        firstName: cleanMe.firstName,
+        lastName: cleanMe.lastName,
+      };
 
-      const lastUpdate: Date | null = await  db.lastUpdated(apiKey) // encrypt
-      const now: Date = new Date()
-      if (isGreaterThan20MinsApart(now, lastUpdate)) {
-        console.log("Greater than 20 mins")
-        // get from canvas then push to db
-        const me = await canvasClientInstance.GetUserInformation();
-        const cleanMe = mapper.cleanUserInformation(me);
-        const userInfo: UserInfo = {
-          userID: apiKey, // TODO encrypt
-          firstName: cleanMe.firstName,
-          lastName: cleanMe.lastName
-        };
-
-        await db.pushGeneralUserInfo(userInfo);
-        await db.syncUpdate(apiKey); // TODO encrypt
-        return userInfo;
-      }
-      else {
-        // less than 20 minutes old
-        // get from db
-        try {
-        const userInfo = await db.getUserInfo(apiKey) // TODO encrypted key
-        return userInfo;
-        }
-        catch (error) {
-          throw error;
-        }
-      }
-
-    }
-    else {
+      await db.pushGeneralUserInfo(userInfo);
+      await db.syncUpdate(apiKey); // TODO encrypt
+      return userInfo;
+    } else {
       return null;
-  }
+    }
   } catch (error) {
     throw error;
   }
 }
-
 
 export default {
   userRequestedmeRoute,
@@ -172,6 +336,7 @@ export default {
   userRequestedAssignmentsRoute,
   userRequestedAssignmentRoute,
   userRequestedSubmissionsRoute,
+  ensureUser,
 };
 
 function isGreaterThan20MinsApart(date1: Date | null, date2: Date | null): boolean {
