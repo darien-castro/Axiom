@@ -6,10 +6,6 @@ import mapper from '../mapper/mapper'
 export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | null> {
   const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
   try {
-
-    // TODO refactor: move initialization of db to server.ts
-    //
-    db.initAllTables();
     // TODO sessions: encrypt api key here using encryption method (probably using other crypto/session service)
     //
     const validKey = await canvasClientInstance.verifyKey(apiKey);
@@ -28,7 +24,6 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
           firstName: cleanMe.firstName,
           lastName: cleanMe.lastName
         };
-
 
         await db.pushGeneralUserInfo(userInfo);
         await db.syncUpdate(apiKey); // TODO encrypt
