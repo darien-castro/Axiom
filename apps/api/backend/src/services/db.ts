@@ -1,17 +1,12 @@
-import dotenv from 'dotenv';
-import mysql, { Pool } from 'mysql2/promise';
+// db.ts
+import { Pool } from 'pg';
 
-dotenv.config();
-
-export const db: Pool = mysql.createPool({
-  host: process.env.DB_HOST || '127.0.0.1',
-  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'Axiom',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+const db = new Pool({
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 5432, // default postgresql port
+  user: process.env.DB_USER || "value not set in .env",
+  password: process.env.DB_PASSWORD || "value not set in .env",
+  database: process.env.DB_NAME || 'axiom',
 });
 
 export default db;
