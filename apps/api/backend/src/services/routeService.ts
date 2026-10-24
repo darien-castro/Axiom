@@ -1,10 +1,123 @@
 // api route helpers
-import { CanvasClient, Canvas_API } from '../client/canvasclient';
-import db, { UserInfo } from './databaseService'
-import mapper from '../mapper/mapper'
+import {
+  CanvasClient,
+  Canvas_API,
+  CanvasCourse,
+  CanvasAssignment,
+  CanvasSubmission,
+} from '../client/canvasclient';
+import db, { UserInfo } from './databaseService';
+import mapper, {
+  CleanCourse,
+  CleanCourseAssignment,
+} from '../mapper/mapper';
+
+export type {
+  CanvasCourse,
+  CanvasAssignment,
+  CanvasSubmission,
+  CleanCourse,
+  CleanCourseAssignment,
+  UserInfo,
+};
+
+const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
+
+export async function userRequestedVerifyRoute(apiKey: string): Promise<boolean> {
+  try {
+    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    return validKey;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCourse[] | null> {
+  try {
+    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    if (validKey === true) {
+      const courses = await canvasClientInstance.GetCourses();
+      const cleanCourses = mapper.cleanCourses(courses);
+      return cleanCourses;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function userRequestedCourseRoute(
+  apiKey: string,
+  courseID: string
+): Promise<CanvasCourse | null> {
+  try {
+    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    if (validKey === true) {
+      const course = await canvasClientInstance.GetCourseData(courseID);
+      return course;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function userRequestedAssignmentsRoute(
+  apiKey: string,
+  courseID: string
+): Promise<CleanCourseAssignment[] | null> {
+  try {
+    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    if (validKey === true) {
+      const assignments = await canvasClientInstance.GetCourseAssignments(courseID);
+      const cleanAssignments = mapper.cleanCourseAssignments(assignments);
+      return cleanAssignments;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function userRequestedAssignmentRoute(
+  apiKey: string,
+  courseID: string,
+  assignmentID: string
+): Promise<CanvasAssignment | null> {
+  try {
+    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    if (validKey === true) {
+      const assignment = await canvasClientInstance.GetCourseAssignment(courseID, assignmentID);
+      return assignment;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function userRequestedSubmissionsRoute(
+  apiKey: string,
+  courseID: string
+): Promise<CanvasSubmission[] | null> {
+  try {
+    const validKey = await canvasClientInstance.verifyKey(apiKey);
+    if (validKey === true) {
+      const submissions = await canvasClientInstance.GetCourseSubmissions(courseID);
+      return submissions;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
 
 export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | null> {
-  const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
   try {
     // TODO sessions: encrypt api key here using encryption method (probably using other crypto/session service)
     //
@@ -51,7 +164,15 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
 }
 
 
-export default {userRequestedmeRoute}
+export default {
+  userRequestedmeRoute,
+  userRequestedVerifyRoute,
+  userRequestedCoursesRoute,
+  userRequestedCourseRoute,
+  userRequestedAssignmentsRoute,
+  userRequestedAssignmentRoute,
+  userRequestedSubmissionsRoute,
+};
 
 function isGreaterThan20MinsApart(date1: Date | null, date2: Date | null): boolean {
   if (date1 == null || date2 == null) {
