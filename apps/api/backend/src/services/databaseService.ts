@@ -62,9 +62,12 @@ export class DatabaseService {
   async createUserApiKeyTable(): Promise<void> {
     const query = `CREATE TABLE IF NOT EXISTS User_Api_Keys (
       userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+      encrypted_user_id TEXT NOT NULL,
       encrypted_api_key TEXT NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`;
+    );
+    ALTER TABLE User_Api_Keys
+      ADD COLUMN IF NOT EXISTS encrypted_user_id TEXT`;
     await db.query(query);
   }
 
@@ -185,12 +188,13 @@ export class DatabaseService {
 
   async pushUserApiKey(userID: string): Promise<void> {
     const query = `
-      INSERT INTO User_Api_Keys (userID, encrypted_api_key)
-      VALUES ($1, $2)
+      INSERT INTO User_Api_Keys (userID, encrypted_user_id, encrypted_api_key)
+      VALUES ($1, $2, $3)
       ON CONFLICT (userID) DO UPDATE SET
+        encrypted_user_id = EXCLUDED.encrypted_user_id,
         encrypted_api_key = EXCLUDED.encrypted_api_key,
         updated_at = CURRENT_TIMESTAMP`;
-    await db.query(query, [userKey(userID), encryptValue(userID)]);
+    await db.query(query, [userKey(userID), encryptValue(userID), encryptValue(userID)]);
   }
 
   async pushUserInfo(userInfo: UserInfo): Promise<void> {
@@ -286,7 +290,7 @@ export class DatabaseService {
           String(id),
           name,
           type,
-          encryptedNullable(grade),
+          grade,
           points,
           String(courseID),
         ]);
@@ -302,7 +306,7 @@ export class DatabaseService {
     ]);
     return rows.map((row) => ({
       ...row,
-      grade: decryptedNullable(row.grade),
+      grade: row.grade,
     }));
   }
 
@@ -312,7 +316,7 @@ export class DatabaseService {
     ]);
     const assignment = rows[0];
     return assignment
-      ? { ...assignment, grade: decryptedNullable(assignment.grade) }
+      ? { ...assignment, grade: assignment.grade }
       : null;
   }
 
@@ -370,7 +374,7 @@ export class DatabaseService {
       const values = [
         userKey(gradeInfoJSON.userID),
         gradeInfoJSON.courseID,
-        encryptValue(gradeInfoJSON.grade),
+        gradeInfoJSON.grade,
       ];
       await db.query(query, values);
       await this.syncUpdate(gradeInfoJSON.userID);
@@ -395,6 +399,19 @@ export class DatabaseService {
       lastName: user.last_name ? decryptValue(user.last_name) : '',
     };
     return retUserInfo;
+  }
+
+  async getUserIDByApiKey(apiKey: string): Promise<string | null> {
+    const { rows } = await db.query<{ encrypted_user_id: string | null; encrypted_api_key: string }>(
+      'SELECT encrypted_user_id, encrypted_api_key FROM User_Api_Keys'
+    );
+    const matchingRow = rows.find(
+      (row) => row.encrypted_user_id && decryptValue(row.encrypted_api_key) === apiKey
+    );
+    if (!matchingRow) {
+      return null;
+    }
+    return decryptValue(matchingRow.encrypted_user_id!);
   }
 
   async getStoredApiKey(userID: string): Promise<string> {
@@ -423,7 +440,25 @@ export class DatabaseService {
     );
     return rows.map((row) => ({
       ...row,
-      grade: decryptedNullable(row.grade),
+      grade: row.grade,
+    }));
+  }
+
+  async getUserGradeInformation(userID: string): Promise<GradeInfo[]> {
+    const { rows } = await db.query<{
+      userid: string;
+      courseid: string;
+      grade: string | null;
+    }>(
+      `SELECT userID as userid, courseID as courseid, grade
+       FROM User_Courses
+       WHERE userID = $1`,
+      [userKey(userID)]
+    );
+    return rows.map((row) => ({
+      userID: userID,
+      courseID: row.courseid,
+      grade: row.grade ?? '',
     }));
   }
 

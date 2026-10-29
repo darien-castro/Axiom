@@ -16,6 +16,7 @@ import assignmentsRoute from './routes/assignments'
 import assignmentRoute from './routes/assignment'
 import submissionsRoute from './routes/submissions'
 import selfRoute from './routes/me'
+import dashboardRoute from './routes/dashboard'
 
 
 db.initAllTables();
@@ -43,6 +44,7 @@ app.use('/api', assignmentsRoute);
 app.use('/api', assignmentRoute);
 app.use('/api', submissionsRoute)
 app.use('/api', selfRoute)
+app.use('/api', dashboardRoute)
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

@@ -5,6 +5,7 @@ import {
   CanvasCourse,
   CanvasAssignment,
   CanvasSubmission,
+  CanvasEnrollment,
 } from '../client/canvasclient';
 import db, { CourseInfo, GradeInfo, UserInfo } from './databaseService';
 import mapper, {
@@ -37,7 +38,8 @@ export async function ensureUser(apiKey: string): Promise<boolean> {
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
       try {
-        const userInfo = await db.getUserInfo(apiKey);
+        const userID = await db.getUserIDByApiKey(apiKey);
+        const userInfo = userID ? await db.getUserInfo(userID) : null;
         if (userInfo) {
           canvasClientInstance.m_apiKey = apiKey;
           return true;
@@ -103,6 +105,26 @@ export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCo
       const cleanCourses = mapper.cleanCourses(courses);
       await db.pushCourseInformation(cleanCourses);
       await db.pushUserCourses(apiKey, cleanCourses.map((c) => c.courseID));
+      await Promise.all(
+        courses
+          .filter((course) => cleanCourses.some((cleanCourse) => cleanCourse.courseID === String(course.id)))
+          .map(async (course) => {
+            const activeEnrollment = course.enrollments?.find(
+              (enrollment: CanvasEnrollment) =>
+                enrollment.enrollment_state === 'active' &&
+                (enrollment.type === undefined || enrollment.type === 'student')
+            );
+            const grade = activeEnrollment?.computed_current_score ??
+              activeEnrollment?.computed_current_grade;
+            if (grade !== null && grade !== undefined && activeEnrollment?.user_id !== undefined) {
+              await db.pushGradeInformation({
+                userID: String(activeEnrollment.user_id),
+                courseID: String(course.id),
+                grade: String(grade),
+              });
+            }
+          })
+      );
       await db.syncUpdate(apiKey);
       return cleanCourses;
     } else {
@@ -150,6 +172,21 @@ export async function userRequestedCourseRoute(
           },
         ]);
         await db.pushUserCourses(apiKey, [String(course.id)]);
+
+        const activeEnrollment = course.enrollments?.find(
+          (enrollment: CanvasEnrollment) =>
+            enrollment.enrollment_state === 'active' &&
+            (enrollment.type === undefined || enrollment.type === 'student')
+        );
+        const grade = activeEnrollment?.computed_current_score ??
+          activeEnrollment?.computed_current_grade;
+        if (grade !== null && grade !== undefined && activeEnrollment?.user_id !== undefined) {
+          await db.pushGradeInformation({
+            userID: String(activeEnrollment.user_id),
+            courseID: String(course.id),
+            grade: String(grade),
+          });
+        }
       }
       await db.syncUpdate(apiKey);
       return course;
@@ -249,9 +286,27 @@ export async function userRequestedAssignmentRoute(
 }
 
 export async function userRequestedDashboardRoute(apiKey: string): Promise<DashboardInfo | null> {
-  //
-  //
-  return null;
+  if (!apiKey || typeof apiKey !== 'string') {
+    return null;
+  }
+
+  const [userInfo, courses] = await Promise.all([
+    userRequestedmeRoute(apiKey),
+    userRequestedCoursesRoute(apiKey),
+  ]);
+
+  if (!userInfo || !courses) {
+    return null;
+  }
+
+  const gradeinfo = await db.getUserGradeInformation(userInfo.userID);
+
+  return {
+    firstname: userInfo.firstName,
+    lastname: userInfo.lastName,
+    courses,
+    gradeinfo,
+  };
 }
 
 export async function userRequestedSubmissionsRoute(
@@ -324,7 +379,7 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
       const me = await canvasClientInstance.GetUserInformation();
       const cleanMe = mapper.cleanUserInformation(me);
       const userInfo: UserInfo = {
-        userID: apiKey,
+        userID: cleanMe.userID,
         firstName: cleanMe.firstName,
         lastName: cleanMe.lastName,
       };
