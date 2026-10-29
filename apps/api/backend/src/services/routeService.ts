@@ -66,6 +66,10 @@ export async function ensureUser(apiKey: string): Promise<boolean> {
       };
 
       await db.pushGeneralUserInfo(userInfo, apiKey);
+<<<<<<< HEAD
+=======
+      await db.syncUpdate(apiKey);
+>>>>>>> feat-crypto
       await db.syncUpdate(cleanMe.userID);
     } catch (err) {
       console.error('Error fetching or storing user info:', err);
@@ -85,11 +89,14 @@ export async function userRequestedVerifyRoute(apiKey: string): Promise<boolean>
 
 export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCourse[] | null> {
   try {
+<<<<<<< HEAD
     const validKey = await ensureUser(apiKey);
     if (!validKey) {
       return null;
     }
 
+=======
+>>>>>>> feat-crypto
     const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
     const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
@@ -106,6 +113,7 @@ export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCo
       }
     }
 
+<<<<<<< HEAD
     const courses = await canvasClientInstance.GetCourses();
     const cleanCourses = mapper.cleanCourses(courses);
     await db.pushCourseInformation(cleanCourses);
@@ -132,6 +140,19 @@ export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCo
     );
     await db.syncUpdate(userID);
     return cleanCourses;
+=======
+    const validKey = await ensureUser(apiKey);
+    if (validKey === true) {
+      const courses = await canvasClientInstance.GetCourses();
+      const cleanCourses = mapper.cleanCourses(courses);
+      await db.pushCourseInformation(cleanCourses);
+      await db.pushUserCourses(userID, cleanCourses.map((c) => c.courseID));
+      await db.syncUpdate(userID);
+      return cleanCourses;
+    } else {
+      return null;
+    }
+>>>>>>> feat-crypto
   } catch (error) {
     throw error;
   }
@@ -142,11 +163,14 @@ export async function userRequestedCourseRoute(
   courseID: string
 ): Promise<CanvasCourse | null> {
   try {
+<<<<<<< HEAD
     const validKey = await ensureUser(apiKey);
     if (!validKey) {
       return null;
     }
 
+=======
+>>>>>>> feat-crypto
     const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
     const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
@@ -168,6 +192,7 @@ export async function userRequestedCourseRoute(
       }
     }
 
+<<<<<<< HEAD
     const course = await canvasClientInstance.GetCourseData(courseID);
     if (course) {
       await db.pushCourseInformation([
@@ -193,6 +218,25 @@ export async function userRequestedCourseRoute(
           grade: String(grade),
         });
       }
+=======
+    const validKey = await ensureUser(apiKey);
+    if (validKey === true) {
+      const course = await canvasClientInstance.GetCourseData(courseID);
+      if (course) {
+        await db.pushCourseInformation([
+          {
+            courseID: String(course.id),
+            courseName: course.name,
+            courseCode: course.course_code,
+          },
+        ]);
+        await db.pushUserCourses(userID, [String(course.id)]);
+      }
+      await db.syncUpdate(userID);
+      return course;
+    } else {
+      return null;
+>>>>>>> feat-crypto
     }
     await db.syncUpdate(userID);
     return course;
@@ -206,11 +250,14 @@ export async function userRequestedAssignmentsRoute(
   courseID: string
 ): Promise<CleanCourseAssignment[] | null> {
   try {
+<<<<<<< HEAD
     const validKey = await ensureUser(apiKey);
     if (!validKey) {
       return null;
     }
 
+=======
+>>>>>>> feat-crypto
     const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
     const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
@@ -233,11 +280,24 @@ export async function userRequestedAssignmentsRoute(
       }
     }
 
+<<<<<<< HEAD
     const assignments = await canvasClientInstance.GetCourseAssignments(courseID);
     const cleanAssignments = mapper.cleanCourseAssignments(assignments);
     await db.pushAssignments(courseID, assignments);
     await db.syncUpdate(userID);
     return cleanAssignments;
+=======
+    const validKey = await ensureUser(apiKey);
+    if (validKey === true) {
+      const assignments = await canvasClientInstance.GetCourseAssignments(courseID);
+      const cleanAssignments = mapper.cleanCourseAssignments(assignments);
+      await db.pushAssignments(courseID, assignments);
+      await db.syncUpdate(userID);
+      return cleanAssignments;
+    } else {
+      return null;
+    }
+>>>>>>> feat-crypto
   } catch (error) {
     throw error;
   }
@@ -249,11 +309,14 @@ export async function userRequestedAssignmentRoute(
   assignmentID: string
 ): Promise<CanvasAssignment | null> {
   try {
+<<<<<<< HEAD
     const validKey = await ensureUser(apiKey);
     if (!validKey) {
       return null;
     }
 
+=======
+>>>>>>> feat-crypto
     const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
     const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
@@ -279,9 +342,22 @@ export async function userRequestedAssignmentRoute(
       }
     }
 
+<<<<<<< HEAD
     const assignment = await canvasClientInstance.GetCourseAssignment(courseID, assignmentID);
     if (assignment) {
       await db.pushAssignments(courseID, [assignment]);
+=======
+    const validKey = await ensureUser(apiKey);
+    if (validKey === true) {
+      const assignment = await canvasClientInstance.GetCourseAssignment(courseID, assignmentID);
+      if (assignment) {
+        await db.pushAssignments(courseID, [assignment]);
+      }
+      await db.syncUpdate(userID);
+      return assignment;
+    } else {
+      return null;
+>>>>>>> feat-crypto
     }
     await db.syncUpdate(userID);
     return assignment;
@@ -320,11 +396,14 @@ export async function userRequestedSubmissionsRoute(
   _assignmentID?: string
 ): Promise<CanvasSubmission[] | null> {
   try {
+<<<<<<< HEAD
     const validKey = await ensureUser(apiKey);
     if (!validKey) {
       return null;
     }
 
+=======
+>>>>>>> feat-crypto
     const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
     const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
@@ -348,10 +427,22 @@ export async function userRequestedSubmissionsRoute(
       }
     }
 
+<<<<<<< HEAD
     const submissions = await canvasClientInstance.GetCourseSubmissions(courseID);
     await db.pushSubmissions(courseID, userID, submissions);
     await db.syncUpdate(userID);
     return submissions;
+=======
+    const validKey = await ensureUser(apiKey);
+    if (validKey === true) {
+      const submissions = await canvasClientInstance.GetCourseSubmissions(courseID);
+      await db.pushSubmissions(courseID, userID, submissions);
+      await db.syncUpdate(userID);
+      return submissions;
+    } else {
+      return null;
+    }
+>>>>>>> feat-crypto
   } catch (error) {
     throw error;
   }
@@ -393,6 +484,10 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
       };
 
       await db.pushGeneralUserInfo(userInfo, apiKey);
+<<<<<<< HEAD
+=======
+      await db.syncUpdate(apiKey);
+>>>>>>> feat-crypto
       await db.syncUpdate(cleanMe.userID);
       return userInfo;
     } else {

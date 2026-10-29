@@ -62,12 +62,20 @@ export class DatabaseService {
   async createUserApiKeyTable(): Promise<void> {
     const query = `CREATE TABLE IF NOT EXISTS User_Api_Keys (
       userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+<<<<<<< HEAD
       encrypted_user_id TEXT NOT NULL,
       encrypted_api_key TEXT NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     ALTER TABLE User_Api_Keys
       ADD COLUMN IF NOT EXISTS encrypted_user_id TEXT`;
+=======
+      encrypted_user_id TEXT,
+      encrypted_api_key TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    ALTER TABLE User_Api_Keys ADD COLUMN IF NOT EXISTS encrypted_user_id TEXT;`;
+>>>>>>> feat-crypto
     await db.query(query);
   }
 
@@ -195,6 +203,22 @@ export class DatabaseService {
         encrypted_api_key = EXCLUDED.encrypted_api_key,
         updated_at = CURRENT_TIMESTAMP`;
     await db.query(query, [userKey(userID), encryptValue(userID), encryptValue(apiKey)]);
+<<<<<<< HEAD
+=======
+  }
+
+  async getUserIDByApiKey(apiKey: string): Promise<string | null> {
+    const { rows } = await db.query<{ encrypted_user_id: string | null; encrypted_api_key: string }>(
+      'SELECT encrypted_user_id, encrypted_api_key FROM User_Api_Keys'
+    );
+    const matchingRow = rows.find(
+      (row) => row.encrypted_user_id && decryptValue(row.encrypted_api_key) === apiKey
+    );
+    if (!matchingRow || !matchingRow.encrypted_user_id) {
+      return null;
+    }
+    return decryptValue(matchingRow.encrypted_user_id);
+>>>>>>> feat-crypto
   }
 
   async pushUserInfo(userInfo: UserInfo): Promise<void> {
