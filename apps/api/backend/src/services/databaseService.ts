@@ -1,5 +1,5 @@
 import db from './db';
-import crypto from '../crypto/crypto';
+import crypto, { decryptValue, encryptValue } from '../crypto/crypto';
 
 export interface UserInfo {
   userID: string;
@@ -27,6 +27,25 @@ interface UpdateRow {
   updated_at: Date | string;
 }
 
+interface UserRow {
+  userID: Buffer;
+  api_key: string;
+  first_name: string;
+  last_name: string;
+}
+
+function userKey(userID: string): Buffer {
+  return crypto.hmacLookup(userID);
+}
+
+function encryptedNullable(value: string | number | null | undefined): string | null {
+  return value === null || value === undefined ? null : encryptValue(String(value));
+}
+
+function decryptedNullable(value: string | null): string | null {
+  return value === null ? null : decryptValue(value);
+}
+
 export class DatabaseService {
   constructor() {}
 
@@ -34,10 +53,12 @@ export class DatabaseService {
     const query = `
       CREATE TABLE IF NOT EXISTS Users (
         userID BYTEA PRIMARY KEY,
-        first_name VARCHAR(255) NOT NULL,
-        last_name VARCHAR(255)
+        api_key TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT
       )`;
     await db.query(query);
+    await db.query('ALTER TABLE Users ADD COLUMN IF NOT EXISTS api_key TEXT');
   }
 
   async createCourseTable(): Promise<void> {
@@ -62,10 +83,11 @@ export class DatabaseService {
       CREATE TABLE IF NOT EXISTS User_Courses (
         userID BYTEA REFERENCES Users(userID),
         courseID VARCHAR(255) REFERENCES Course(courseID),
-        grade VARCHAR(10),
+        grade TEXT,
         PRIMARY KEY (userID, courseID)
       )`;
     await db.query(query);
+    await db.query('ALTER TABLE User_Courses ALTER COLUMN grade TYPE TEXT');
   }
 
   async createAssignmentTable(): Promise<void> {
@@ -74,11 +96,12 @@ export class DatabaseService {
         assignmentID VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         type VARCHAR(255),
-        grade VARCHAR(10),
+        grade TEXT,
         points FLOAT,
         courseID VARCHAR(255) REFERENCES Course(courseID)
       );
       ALTER TABLE Assignment ADD COLUMN IF NOT EXISTS points FLOAT;
+      ALTER TABLE Assignment ALTER COLUMN grade TYPE TEXT;
     `;
     await db.query(query);
   }
@@ -90,11 +113,16 @@ export class DatabaseService {
         assignmentID VARCHAR(255),
         courseID VARCHAR(255),
         userID BYTEA,
-        score FLOAT,
-        grade VARCHAR(50),
-        submitted_at VARCHAR(255)
+        score TEXT,
+        grade TEXT,
+        submitted_at TEXT
       )`;
     await db.query(query);
+    await db.query(`
+      ALTER TABLE Submission ALTER COLUMN score TYPE TEXT;
+      ALTER TABLE Submission ALTER COLUMN grade TYPE TEXT;
+      ALTER TABLE Submission ALTER COLUMN submitted_at TYPE TEXT;
+    `);
   }
 
   async createUpdateTable(): Promise<void> {
@@ -125,15 +153,17 @@ export class DatabaseService {
   async pushGeneralUserInfo(userInfoJSON: UserInfo): Promise<void> {
     try {
       const query = `
-        INSERT INTO Users (userID, first_name, last_name)
-        VALUES ($1, $2, $3)
+        INSERT INTO Users (userID, api_key, first_name, last_name)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (userID) DO UPDATE SET
+          api_key = EXCLUDED.api_key,
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name`;
       const values = [
-        userInfoJSON.userID,
-        userInfoJSON.firstName,
-        userInfoJSON.lastName,
+        userKey(userInfoJSON.userID),
+        encryptValue(userInfoJSON.userID),
+        encryptValue(userInfoJSON.firstName),
+        encryptValue(userInfoJSON.lastName),
       ];
       await db.query(query, values);
     } catch (error) {
@@ -177,7 +207,7 @@ export class DatabaseService {
           INSERT INTO User_Courses (userID, courseID)
           VALUES ($1, $2)
           ON CONFLICT (userID, courseID) DO NOTHING`;
-        await db.query(query, [userID, courseID]);
+        await db.query(query, [userKey(userID), courseID]);
       }
     } catch (error) {
       console.error('Error pushing user courses:', error);
@@ -192,7 +222,7 @@ export class DatabaseService {
       FROM Course c
       JOIN User_Courses uc ON c.courseID = uc.courseID
       WHERE uc.userID = $1`;
-    const { rows } = await db.query(query, [userID]);
+    const { rows } = await db.query(query, [userKey(userID)]);
     return rows;
   }
 
@@ -215,7 +245,14 @@ export class DatabaseService {
             grade = EXCLUDED.grade,
             points = EXCLUDED.points,
             courseID = EXCLUDED.courseID`;
-        await db.query(query, [String(id), name, type, grade, points, String(courseID)]);
+        await db.query(query, [
+          String(id),
+          name,
+          type,
+          encryptedNullable(grade),
+          points,
+          String(courseID),
+        ]);
       }
     } catch (error) {
       console.error('Error pushing assignments:', error);
@@ -226,20 +263,28 @@ export class DatabaseService {
     const { rows } = await db.query('SELECT * FROM Assignment WHERE courseID = $1', [
       String(courseID),
     ]);
-    return rows;
+    return rows.map((row) => ({
+      ...row,
+      grade: decryptedNullable(row.grade),
+    }));
   }
 
   async getAssignment(assignmentID: string): Promise<any | null> {
     const { rows } = await db.query('SELECT * FROM Assignment WHERE assignmentID = $1', [
       String(assignmentID),
     ]);
-    return rows[0] || null;
+    const assignment = rows[0];
+    return assignment
+      ? { ...assignment, grade: decryptedNullable(assignment.grade) }
+      : null;
   }
 
   async pushSubmissions(courseID: string, userID: string, submissions: any[]): Promise<void> {
     try {
       for (const s of submissions) {
-        const id = s.id ? String(s.id) : `${courseID}_${s.assignment_id || s.assignmentID}_${userID}`;
+        const id = s.id
+          ? String(s.id)
+          : `${courseID}_${s.assignment_id || s.assignmentID}_${userKey(userID).toString('hex')}`;
         const query = `
           INSERT INTO Submission (submissionID, assignmentID, courseID, userID, score, grade, submitted_at)
           VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -251,10 +296,10 @@ export class DatabaseService {
           id,
           String(s.assignment_id || s.assignmentID || ''),
           String(courseID),
-          userID,
-          s.score !== null && s.score !== undefined ? Number(s.score) : null,
-          s.grade ? String(s.grade) : null,
-          s.submitted_at ? String(s.submitted_at) : null,
+          userKey(userID),
+          encryptedNullable(s.score !== null && s.score !== undefined ? Number(s.score) : null),
+          encryptedNullable(s.grade ? String(s.grade) : null),
+          encryptedNullable(s.submitted_at ? String(s.submitted_at) : null),
         ]);
       }
     } catch (error) {
@@ -267,10 +312,15 @@ export class DatabaseService {
     const values: any[] = [String(courseID)];
     if (userID) {
       query += ' AND userID = $2';
-      values.push(userID);
+      values.push(userKey(userID));
     }
     const { rows } = await db.query(query, values);
-    return rows;
+    return rows.map((row) => ({
+      ...row,
+      score: decryptedNullable(row.score),
+      grade: decryptedNullable(row.grade),
+      submitted_at: decryptedNullable(row.submitted_at),
+    }));
   }
 
   async pushGradeInformation(gradeInfoJSON: GradeInfo): Promise<void> {
@@ -281,9 +331,9 @@ export class DatabaseService {
         ON CONFLICT (userID, courseID)
         DO UPDATE SET grade = EXCLUDED.grade`;
       const values = [
-        crypto.sha256(gradeInfoJSON.userID),
+        userKey(gradeInfoJSON.userID),
         gradeInfoJSON.courseID,
-        gradeInfoJSON.grade,
+        encryptValue(gradeInfoJSON.grade),
       ];
       await db.query(query, values);
       await this.syncUpdate(gradeInfoJSON.userID);
@@ -293,19 +343,32 @@ export class DatabaseService {
   }
 
   async getUserInfo(userID: string): Promise<UserInfo> {
-    const { rows } = await db.query('SELECT * FROM Users WHERE userID = $1', [
-      userID,
+    const { rows } = await db.query<UserRow>('SELECT * FROM Users WHERE userID = $1', [
+      userKey(userID),
     ]);
     const user = rows[0];
     if (!user) {
       throw new Error(`User with ID ${userID} not found in database`);
     }
+
     const retUserInfo: UserInfo = {
-      userID: user.userID?.toString() ?? userID,
-      firstName: user.first_name,
-      lastName: user.last_name,
+      userID,
+      firstName: decryptValue(user.first_name),
+      lastName: user.last_name ? decryptValue(user.last_name) : '',
     };
     return retUserInfo;
+  }
+
+  async getStoredApiKey(userID: string): Promise<string> {
+    const { rows } = await db.query<Pick<UserRow, 'api_key'>>(
+      'SELECT api_key FROM Users WHERE userID = $1',
+      [userKey(userID)]
+    );
+    const apiKey = rows[0]?.api_key;
+    if (!apiKey) {
+      throw new Error(`API key for user ${userID} not found in database`);
+    }
+    return decryptValue(apiKey);
   }
 
   async getCourseInformation(courseID: string): Promise<any[]> {
@@ -320,7 +383,10 @@ export class DatabaseService {
       'SELECT * FROM User_Courses WHERE courseID = $1',
       [courseID]
     );
-    return rows;
+    return rows.map((row) => ({
+      ...row,
+      grade: decryptedNullable(row.grade),
+    }));
   }
 
   async syncUpdate(userID: string): Promise<void> {
@@ -328,7 +394,7 @@ export class DatabaseService {
       const query = `
         INSERT INTO Updates (userID, updated_at)
         VALUES ($1, $2)`;
-      const values = [userID, new Date()];
+      const values = [userKey(userID), new Date()];
       await db.query(query, values);
     } catch (error) {
       console.error(`Error Syncing Database: ${error}`);
@@ -342,7 +408,7 @@ export class DatabaseService {
        WHERE userID = $1
        ORDER BY updated_at DESC
        LIMIT 1`,
-      [userID]
+      [userKey(userID)]
     );
     const row = rows[0];
     if (!row || !row.updated_at) {

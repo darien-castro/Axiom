@@ -50,13 +50,13 @@ export async function ensureUser(apiKey: string): Promise<boolean> {
       const me = await canvasClientInstance.GetUserInformation();
       const cleanMe = mapper.cleanUserInformation(me);
       const userInfo: UserInfo = {
-        userID: apiKey, // TODO encrypt
+        userID: apiKey,
         firstName: cleanMe.firstName,
         lastName: cleanMe.lastName,
       };
 
       await db.pushGeneralUserInfo(userInfo);
-      await db.syncUpdate(apiKey); // TODO encrypt
+      await db.syncUpdate(apiKey);
     } catch (err) {
       console.error('Error fetching or storing user info:', err);
     }
@@ -244,7 +244,7 @@ export async function userRequestedAssignmentRoute(
 export async function userRequestedSubmissionsRoute(
   apiKey: string,
   courseID: string,
-  assignmentID: string
+  _assignmentID?: string
 ): Promise<CanvasSubmission[] | null> {
   try {
     const lastUpdate: Date | null = await db.lastUpdated(apiKey);
@@ -285,14 +285,13 @@ export async function userRequestedSubmissionsRoute(
 
 export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | null> {
   try {
-    // TODO sessions: encrypt api key here using encryption method (probably using other crypto/session service)
     try {
-      const lastUpdate: Date | null = await db.lastUpdated(apiKey); // encrypt
+      const lastUpdate: Date | null = await db.lastUpdated(apiKey);
       const now: Date = new Date();
       if (!isGreaterThan20MinsApart(now, lastUpdate)) {
         // less than 20 minutes old, get from db
         try {
-          const userInfo = await db.getUserInfo(apiKey); // TODO encrypted key
+          const userInfo = await db.getUserInfo(apiKey);
           if (userInfo) {
             canvasClientInstance.m_apiKey = apiKey;
             return userInfo;
@@ -312,13 +311,13 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
       const me = await canvasClientInstance.GetUserInformation();
       const cleanMe = mapper.cleanUserInformation(me);
       const userInfo: UserInfo = {
-        userID: apiKey, // TODO encrypt
+        userID: apiKey,
         firstName: cleanMe.firstName,
         lastName: cleanMe.lastName,
       };
 
       await db.pushGeneralUserInfo(userInfo);
-      await db.syncUpdate(apiKey); // TODO encrypt
+      await db.syncUpdate(apiKey);
       return userInfo;
     } else {
       return null;
