@@ -9,6 +9,8 @@ export interface EncryptedUserId {
     authTag: string;
 }
 
+const IV_LENGTH = 12;
+const AUTH_TAG_LENGTH = 16;
 
 // getting and checking vals
 const configuredKey = process.env.ENCRYPTION_KEY;
@@ -65,11 +67,35 @@ export function hmacLookup(value: string): Buffer {
 }
 
 export function encryptValue(value: string): string {
-    return JSON.stringify(encryptUserId(value));
+    const encrypted = encryptUserId(value);
+    const packed = Buffer.concat([
+        Buffer.from(encrypted.iv, 'hex'),
+        Buffer.from(encrypted.authTag, 'hex'),
+        Buffer.from(encrypted.ciphertext, 'hex'),
+    ]);
+
+    return packed.toString('base64');
 }
 
 export function decryptValue(value: string): string {
-    return decryptUserId(JSON.parse(value) as EncryptedUserId);
+    // Keep existing JSON values readable while rows are rewritten in the new format.
+    if (value.trimStart().startsWith('{')) {
+        return decryptUserId(JSON.parse(value) as EncryptedUserId);
+    }
+
+    const packed = Buffer.from(value, 'base64');
+    if (packed.length < IV_LENGTH + AUTH_TAG_LENGTH) {
+        throw new Error('Invalid encrypted value');
+    }
+
+    const iv = packed.subarray(0, IV_LENGTH);
+    const authTag = packed.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
+    const ciphertext = packed.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
+    const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+
+    decipher.setAuthTag(authTag);
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return decrypted.toString('utf8');
 }
 
 export default {

@@ -27,9 +27,11 @@ interface UpdateRow {
   updated_at: Date | string;
 }
 
-interface UserRow {
-  userID: Buffer;
-  api_key: string;
+interface UserApiKeyRow {
+  encrypted_api_key: string;
+}
+
+interface UserInfoRow {
   first_name: string;
   last_name: string;
 }
@@ -52,13 +54,28 @@ export class DatabaseService {
   async createUserTable(): Promise<void> {
     const query = `
       CREATE TABLE IF NOT EXISTS Users (
-        userID BYTEA PRIMARY KEY,
-        api_key TEXT NOT NULL,
-        first_name TEXT NOT NULL,
-        last_name TEXT
+        userID BYTEA PRIMARY KEY
       )`;
     await db.query(query);
-    await db.query('ALTER TABLE Users ADD COLUMN IF NOT EXISTS api_key TEXT');
+  }
+
+  async createUserApiKeyTable(): Promise<void> {
+    const query = `CREATE TABLE IF NOT EXISTS User_Api_Keys (
+      userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+      encrypted_api_key TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`;
+    await db.query(query);
+  }
+
+  async createUserInfoTable(): Promise<void> {
+    const query = `CREATE TABLE IF NOT EXISTS User_Info (
+      userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+      first_name TEXT NOT NULL,
+      last_name TEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`;
+    await db.query(query);
   }
 
   async createCourseTable(): Promise<void> {
@@ -139,6 +156,8 @@ export class DatabaseService {
     console.log('Initializing PostgreSQL schema...');
     try {
       await this.createUserTable();
+      await this.createUserApiKeyTable();
+      await this.createUserInfoTable();
       await this.createCourseTable();
       await this.createUserCoursesTable();
       await this.createAssignmentTable();
@@ -152,23 +171,41 @@ export class DatabaseService {
 
   async pushGeneralUserInfo(userInfoJSON: UserInfo): Promise<void> {
     try {
-      const query = `
-        INSERT INTO Users (userID, api_key, first_name, last_name)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (userID) DO UPDATE SET
-          api_key = EXCLUDED.api_key,
-          first_name = EXCLUDED.first_name,
-          last_name = EXCLUDED.last_name`;
-      const values = [
-        userKey(userInfoJSON.userID),
-        encryptValue(userInfoJSON.userID),
-        encryptValue(userInfoJSON.firstName),
-        encryptValue(userInfoJSON.lastName),
-      ];
-      await db.query(query, values);
+      const userID = userKey(userInfoJSON.userID);
+      await db.query(
+        'INSERT INTO Users (userID) VALUES ($1) ON CONFLICT (userID) DO NOTHING',
+        [userID]
+      );
+      await this.pushUserApiKey(userInfoJSON.userID);
+      await this.pushUserInfo(userInfoJSON);
     } catch (error) {
       console.error('Error pushing user data:', error);
     }
+  }
+
+  async pushUserApiKey(userID: string): Promise<void> {
+    const query = `
+      INSERT INTO User_Api_Keys (userID, encrypted_api_key)
+      VALUES ($1, $2)
+      ON CONFLICT (userID) DO UPDATE SET
+        encrypted_api_key = EXCLUDED.encrypted_api_key,
+        updated_at = CURRENT_TIMESTAMP`;
+    await db.query(query, [userKey(userID), encryptValue(userID)]);
+  }
+
+  async pushUserInfo(userInfo: UserInfo): Promise<void> {
+    const query = `
+      INSERT INTO User_Info (userID, first_name, last_name)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (userID) DO UPDATE SET
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        updated_at = CURRENT_TIMESTAMP`;
+    await db.query(query, [
+      userKey(userInfo.userID),
+      encryptValue(userInfo.firstName),
+      encryptValue(userInfo.lastName),
+    ]);
   }
 
   async pushCourseInformation(courseInfoJSON: CourseInfo[]): Promise<void> {
@@ -343,9 +380,10 @@ export class DatabaseService {
   }
 
   async getUserInfo(userID: string): Promise<UserInfo> {
-    const { rows } = await db.query<UserRow>('SELECT * FROM Users WHERE userID = $1', [
-      userKey(userID),
-    ]);
+    const { rows } = await db.query<UserInfoRow>(
+      'SELECT first_name, last_name FROM User_Info WHERE userID = $1',
+      [userKey(userID)]
+    );
     const user = rows[0];
     if (!user) {
       throw new Error(`User with ID ${userID} not found in database`);
@@ -360,11 +398,11 @@ export class DatabaseService {
   }
 
   async getStoredApiKey(userID: string): Promise<string> {
-    const { rows } = await db.query<Pick<UserRow, 'api_key'>>(
-      'SELECT api_key FROM Users WHERE userID = $1',
+    const { rows } = await db.query<UserApiKeyRow>(
+      'SELECT encrypted_api_key FROM User_Api_Keys WHERE userID = $1',
       [userKey(userID)]
     );
-    const apiKey = rows[0]?.api_key;
+    const apiKey = rows[0]?.encrypted_api_key;
     if (!apiKey) {
       throw new Error(`API key for user ${userID} not found in database`);
     }
