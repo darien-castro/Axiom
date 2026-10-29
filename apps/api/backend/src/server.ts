@@ -29,7 +29,11 @@ app.get('/healthz', (_req: Request, res: Response) => {
 
 
 // ideally, once released, would only allow access from one server
-app.use(cors());
+app.use(cors(
+  {
+    origin: 'http://localhost:3000',
+  }
+));
 
 // main routes
 app.get("/", (req, res) => {

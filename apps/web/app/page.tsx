@@ -31,9 +31,9 @@ export default function Home() {
     }
     else {
       const payload = {
-        'apiKey': val
+        apiKey: val
       };
-      const response = await fetch("http://localhost/5000/verify", {
+      const response = await fetch("http://localhost:5000/api/verify", {
         method: 'POST',
         headers: {
                   'Content-Type': 'application/json', // Alert server that you are sending JSON
@@ -44,11 +44,10 @@ export default function Home() {
         setShowGif(false);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      setShowGif(true);
       const data = await response.json();
       console.log(data);
-
     }
-
   }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 bg-background p-4 text-foreground">
