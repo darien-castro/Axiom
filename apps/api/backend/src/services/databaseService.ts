@@ -62,9 +62,11 @@ export class DatabaseService {
   async createUserApiKeyTable(): Promise<void> {
     const query = `CREATE TABLE IF NOT EXISTS User_Api_Keys (
       userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+      encrypted_user_id TEXT,
       encrypted_api_key TEXT NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`;
+    );
+    ALTER TABLE User_Api_Keys ADD COLUMN IF NOT EXISTS encrypted_user_id TEXT;`;
     await db.query(query);
   }
 
@@ -169,28 +171,42 @@ export class DatabaseService {
     }
   }
 
-  async pushGeneralUserInfo(userInfoJSON: UserInfo): Promise<void> {
+  async pushGeneralUserInfo(userInfoJSON: UserInfo, apiKey?: string): Promise<void> {
     try {
       const userID = userKey(userInfoJSON.userID);
       await db.query(
         'INSERT INTO Users (userID) VALUES ($1) ON CONFLICT (userID) DO NOTHING',
         [userID]
       );
-      await this.pushUserApiKey(userInfoJSON.userID);
+      await this.pushUserApiKey(userInfoJSON.userID, apiKey || userInfoJSON.userID);
       await this.pushUserInfo(userInfoJSON);
     } catch (error) {
       console.error('Error pushing user data:', error);
     }
   }
 
-  async pushUserApiKey(userID: string): Promise<void> {
+  async pushUserApiKey(userID: string, apiKey: string): Promise<void> {
     const query = `
-      INSERT INTO User_Api_Keys (userID, encrypted_api_key)
-      VALUES ($1, $2)
+      INSERT INTO User_Api_Keys (userID, encrypted_user_id, encrypted_api_key)
+      VALUES ($1, $2, $3)
       ON CONFLICT (userID) DO UPDATE SET
+        encrypted_user_id = EXCLUDED.encrypted_user_id,
         encrypted_api_key = EXCLUDED.encrypted_api_key,
         updated_at = CURRENT_TIMESTAMP`;
-    await db.query(query, [userKey(userID), encryptValue(userID)]);
+    await db.query(query, [userKey(userID), encryptValue(userID), encryptValue(apiKey)]);
+  }
+
+  async getUserIDByApiKey(apiKey: string): Promise<string | null> {
+    const { rows } = await db.query<{ encrypted_user_id: string | null; encrypted_api_key: string }>(
+      'SELECT encrypted_user_id, encrypted_api_key FROM User_Api_Keys'
+    );
+    const matchingRow = rows.find(
+      (row) => row.encrypted_user_id && decryptValue(row.encrypted_api_key) === apiKey
+    );
+    if (!matchingRow || !matchingRow.encrypted_user_id) {
+      return null;
+    }
+    return decryptValue(matchingRow.encrypted_user_id);
   }
 
   async pushUserInfo(userInfo: UserInfo): Promise<void> {
@@ -455,4 +471,5 @@ export class DatabaseService {
     return new Date(row.updated_at);
   }
 }
+
 export default new DatabaseService();

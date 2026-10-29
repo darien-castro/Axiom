@@ -25,12 +25,14 @@ const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu
 
 export async function ensureUser(apiKey: string): Promise<boolean> {
   try {
-    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const userID = await db.getUserIDByApiKey(apiKey);
+    const lookupID = userID || apiKey;
+    const lastUpdate: Date | null = await db.lastUpdated(lookupID);
     const now: Date = new Date();
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
       try {
-        const userInfo = await db.getUserInfo(apiKey);
+        const userInfo = await db.getUserInfo(lookupID);
         if (userInfo) {
           canvasClientInstance.m_apiKey = apiKey;
           return true;
@@ -50,13 +52,14 @@ export async function ensureUser(apiKey: string): Promise<boolean> {
       const me = await canvasClientInstance.GetUserInformation();
       const cleanMe = mapper.cleanUserInformation(me);
       const userInfo: UserInfo = {
-        userID: apiKey,
+        userID: cleanMe.userID,
         firstName: cleanMe.firstName,
         lastName: cleanMe.lastName,
       };
 
-      await db.pushGeneralUserInfo(userInfo);
+      await db.pushGeneralUserInfo(userInfo, apiKey);
       await db.syncUpdate(apiKey);
+      await db.syncUpdate(cleanMe.userID);
     } catch (err) {
       console.error('Error fetching or storing user info:', err);
     }
@@ -75,12 +78,13 @@ export async function userRequestedVerifyRoute(apiKey: string): Promise<boolean>
 
 export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCourse[] | null> {
   try {
-    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
+    const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
       try {
-        const dbCourses = await db.getUserCourses(apiKey);
+        const dbCourses = await db.getUserCourses(userID);
         if (dbCourses && dbCourses.length > 0) {
           canvasClientInstance.m_apiKey = apiKey;
           return dbCourses;
@@ -95,8 +99,8 @@ export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCo
       const courses = await canvasClientInstance.GetCourses();
       const cleanCourses = mapper.cleanCourses(courses);
       await db.pushCourseInformation(cleanCourses);
-      await db.pushUserCourses(apiKey, cleanCourses.map((c) => c.courseID));
-      await db.syncUpdate(apiKey);
+      await db.pushUserCourses(userID, cleanCourses.map((c) => c.courseID));
+      await db.syncUpdate(userID);
       return cleanCourses;
     } else {
       return null;
@@ -111,7 +115,8 @@ export async function userRequestedCourseRoute(
   courseID: string
 ): Promise<CanvasCourse | null> {
   try {
-    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
+    const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
@@ -142,9 +147,9 @@ export async function userRequestedCourseRoute(
             courseCode: course.course_code,
           },
         ]);
-        await db.pushUserCourses(apiKey, [String(course.id)]);
+        await db.pushUserCourses(userID, [String(course.id)]);
       }
-      await db.syncUpdate(apiKey);
+      await db.syncUpdate(userID);
       return course;
     } else {
       return null;
@@ -159,7 +164,8 @@ export async function userRequestedAssignmentsRoute(
   courseID: string
 ): Promise<CleanCourseAssignment[] | null> {
   try {
-    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
+    const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
@@ -185,7 +191,7 @@ export async function userRequestedAssignmentsRoute(
       const assignments = await canvasClientInstance.GetCourseAssignments(courseID);
       const cleanAssignments = mapper.cleanCourseAssignments(assignments);
       await db.pushAssignments(courseID, assignments);
-      await db.syncUpdate(apiKey);
+      await db.syncUpdate(userID);
       return cleanAssignments;
     } else {
       return null;
@@ -201,7 +207,8 @@ export async function userRequestedAssignmentRoute(
   assignmentID: string
 ): Promise<CanvasAssignment | null> {
   try {
-    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
+    const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
@@ -231,7 +238,7 @@ export async function userRequestedAssignmentRoute(
       if (assignment) {
         await db.pushAssignments(courseID, [assignment]);
       }
-      await db.syncUpdate(apiKey);
+      await db.syncUpdate(userID);
       return assignment;
     } else {
       return null;
@@ -247,12 +254,13 @@ export async function userRequestedSubmissionsRoute(
   _assignmentID?: string
 ): Promise<CanvasSubmission[] | null> {
   try {
-    const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+    const userID = (await db.getUserIDByApiKey(apiKey)) || apiKey;
+    const lastUpdate: Date | null = await db.lastUpdated(userID);
     const now: Date = new Date();
 
     if (!isGreaterThan20MinsApart(now, lastUpdate)) {
       try {
-        const dbSubmissions = await db.getSubmissions(courseID, apiKey);
+        const dbSubmissions = await db.getSubmissions(courseID, userID);
         if (dbSubmissions && dbSubmissions.length > 0) {
           canvasClientInstance.m_apiKey = apiKey;
           return dbSubmissions.map((s: any) => ({
@@ -272,8 +280,8 @@ export async function userRequestedSubmissionsRoute(
     const validKey = await ensureUser(apiKey);
     if (validKey === true) {
       const submissions = await canvasClientInstance.GetCourseSubmissions(courseID);
-      await db.pushSubmissions(courseID, apiKey, submissions);
-      await db.syncUpdate(apiKey);
+      await db.pushSubmissions(courseID, userID, submissions);
+      await db.syncUpdate(userID);
       return submissions;
     } else {
       return null;
@@ -286,12 +294,14 @@ export async function userRequestedSubmissionsRoute(
 export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | null> {
   try {
     try {
-      const lastUpdate: Date | null = await db.lastUpdated(apiKey);
+      const userID = await db.getUserIDByApiKey(apiKey);
+      const lookupID = userID || apiKey;
+      const lastUpdate: Date | null = await db.lastUpdated(lookupID);
       const now: Date = new Date();
       if (!isGreaterThan20MinsApart(now, lastUpdate)) {
         // less than 20 minutes old, get from db
         try {
-          const userInfo = await db.getUserInfo(apiKey);
+          const userInfo = await db.getUserInfo(lookupID);
           if (userInfo) {
             canvasClientInstance.m_apiKey = apiKey;
             return userInfo;
@@ -311,13 +321,14 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
       const me = await canvasClientInstance.GetUserInformation();
       const cleanMe = mapper.cleanUserInformation(me);
       const userInfo: UserInfo = {
-        userID: apiKey,
+        userID: cleanMe.userID,
         firstName: cleanMe.firstName,
         lastName: cleanMe.lastName,
       };
 
-      await db.pushGeneralUserInfo(userInfo);
+      await db.pushGeneralUserInfo(userInfo, apiKey);
       await db.syncUpdate(apiKey);
+      await db.syncUpdate(cleanMe.userID);
       return userInfo;
     } else {
       return null;
