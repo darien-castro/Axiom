@@ -24,7 +24,7 @@ We can split the back-end into it's 4 major parts:
 #### Storing Data
 * [[Data Mapper|Data Mapper]]
 * [[Cryptography|Cryptography]]
-* [[UNCC/Fall26/Software Engineering/Projects/Axiom/Backend/Documentation/Database|Database]]
+* [[Database]]
 
 #### Computing Data
 * 
