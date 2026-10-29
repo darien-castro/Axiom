@@ -22,8 +22,13 @@ export interface CanvasCourse {
   [key: string]: unknown;
 }
 
-export interface CanvasEnrollment{
-
+export interface CanvasEnrollment {
+  type?: string;
+  user_id?: string | number;
+  enrollment_state?: string;
+  computed_current_score?: number | null;
+  computed_current_grade?: string | null;
+  [key: string]: unknown;
 }
 
 export interface CanvasAssignment {
@@ -97,7 +102,7 @@ export class CanvasClient {
   }
 
   async GetCourses(): Promise<CanvasCourse[]> {
-    const apiEndpoint = '/api/v1/courses';
+    const apiEndpoint = '/api/v1/courses?include[]=total_scores';
     return this.GetRequest<CanvasCourse[]>(apiEndpoint);
   }
 
@@ -107,7 +112,7 @@ export class CanvasClient {
   }
 
   async GetCourseData(courseID: string | number): Promise<CanvasCourse> {
-    const apiEndpoint = `/api/v1/courses/${courseID}`;
+    const apiEndpoint = `/api/v1/courses/${courseID}?include[]=total_scores`;
     return this.GetRequest<CanvasCourse>(apiEndpoint);
   }
 
@@ -124,7 +129,7 @@ export class CanvasClient {
   }
 
   async GetCourseAssignments(courseID: string | number): Promise<CanvasAssignment[]> {
-    const apiEndpoint = `/api/v1/courses/${courseID}/assignments`;
+    const apiEndpoint = `/api/v1/courses/${courseID}/assignments?per_page=100`; // testing
     return this.GetRequest<CanvasAssignment[]>(apiEndpoint);
   }
 
