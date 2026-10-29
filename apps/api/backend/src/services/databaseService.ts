@@ -27,6 +27,8 @@ interface UpdateRow {
   updated_at: Date | string;
 }
 
+
+
 export class DatabaseService {
   constructor() {}
 

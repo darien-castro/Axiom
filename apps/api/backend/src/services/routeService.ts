@@ -6,11 +6,18 @@ import {
   CanvasAssignment,
   CanvasSubmission,
 } from '../client/canvasclient';
-import db, { UserInfo } from './databaseService';
+import db, { CourseInfo, GradeInfo, UserInfo } from './databaseService';
 import mapper, {
   CleanCourse,
   CleanCourseAssignment,
 } from '../mapper/mapper';
+
+export interface DashboardInfo {
+  firstname: string
+  lastname?: string
+  courses?: CourseInfo[]
+  gradeinfo?: GradeInfo[]
+}
 
 export type {
   CanvasCourse,
@@ -241,6 +248,12 @@ export async function userRequestedAssignmentRoute(
   }
 }
 
+export async function userRequestedDashboardRoute(apiKey: string): Promise<DashboardInfo | null> {
+  //
+  //
+  return null;
+}
+
 export async function userRequestedSubmissionsRoute(
   apiKey: string,
   courseID: string,
@@ -328,6 +341,10 @@ export async function userRequestedmeRoute(apiKey: string): Promise<UserInfo | n
   }
 }
 
+export async function updateAllTables() {
+
+}
+
 export default {
   userRequestedmeRoute,
   userRequestedVerifyRoute,
@@ -336,6 +353,7 @@ export default {
   userRequestedAssignmentsRoute,
   userRequestedAssignmentRoute,
   userRequestedSubmissionsRoute,
+  userRequestedDashboardRoute,
   ensureUser,
 };
 
