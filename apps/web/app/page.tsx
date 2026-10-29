@@ -33,20 +33,27 @@ export default function Home() {
       const payload = {
         apiKey: val
       };
-      const response = await fetch("http://localhost:5000/api/verify", {
-        method: 'POST',
-        headers: {
-                  'Content-Type': 'application/json', // Alert server that you are sending JSON
-                },
-        body: JSON.stringify(payload)
-      })
-      if (!response.ok) {
+      try {
+        const response = await fetch("http://localhost:5000/api/verify", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json', // Alert server that you are sending JSON
+          },
+          body: JSON.stringify(payload)
+        });
+        if (response.status === 200) {
+          setShowGif(true);
+          const data = await response.text();
+          console.log(data);
+        } else {
+          setShowGif(false);
+          const errorData = await response.json().catch(() => null);
+          console.error(errorData?.error || `HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
         setShowGif(false);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.error('Error verifying Canvas API Key:', error);
       }
-      setShowGif(true);
-      const data = await response.json();
-      console.log(data);
     }
   }
   return (
