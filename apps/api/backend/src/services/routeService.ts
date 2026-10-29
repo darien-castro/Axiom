@@ -77,10 +77,13 @@ export async function ensureUser(apiKey: string): Promise<boolean> {
 
 export async function userRequestedVerifyRoute(apiKey: string): Promise<boolean> {
   try {
-    return await ensureUser(apiKey);
+    return await checkUser(apiKey);
   } catch (error) {
     throw error;
   }
+}
+export async function checkUser(apiKey: string): Promise<boolean> {
+ return await canvasClientInstance.verifyKey(apiKey)
 }
 
 export async function userRequestedCoursesRoute(apiKey: string): Promise<CleanCourse[] | null> {
@@ -417,6 +420,7 @@ export default {
   userRequestedSubmissionsRoute,
   userRequestedDashboardRoute,
   ensureUser,
+  checkUser
 };
 
 function isGreaterThan20MinsApart(date1: Date | null, date2: Date | null): boolean {
