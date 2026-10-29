@@ -21,7 +21,7 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [showGif, setShowGif] = useState(false);
   const router = useRouter();
-  const handleAction = (val: string) => {
+  const handleAction = async (val: string) => {
     setInputValue(val);
     if (val === 'mocksite') {
       setShowGif(true);
@@ -30,12 +30,29 @@ export default function Home() {
       }, 2000);
     }
     else {
-      setShowGif(false);
+      const payload = {
+        'apiKey': val
+      };
+      const response = await fetch("http://localhost/5000/verify", {
+        method: 'POST',
+        headers: {
+                  'Content-Type': 'application/json', // Alert server that you are sending JSON
+                },
+        body: JSON.stringify(payload)
+      })
+      if (!response.ok) {
+        setShowGif(false);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log(data);
+
     }
+
   }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 bg-background p-4 text-foreground">
-      <div className="dark bg-background  flex items-center justify-center p-8">
+      <div className="">
         <h1 className="font-sans font-bold text-5xl md:text-7xl tracking-wider pb-4
              bg-gradient-to-r from-[#bf616a] via-[#a69490] to-[#84b38e] bg-clip-text text-transparent
              border-b-2">Axiom</h1>
