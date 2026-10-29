@@ -172,21 +172,21 @@ export class DatabaseService {
     }
   }
 
-  async pushGeneralUserInfo(userInfoJSON: UserInfo): Promise<void> {
+  async pushGeneralUserInfo(userInfoJSON: UserInfo, apiKey?: string): Promise<void> {
     try {
       const userID = userKey(userInfoJSON.userID);
       await db.query(
         'INSERT INTO Users (userID) VALUES ($1) ON CONFLICT (userID) DO NOTHING',
         [userID]
       );
-      await this.pushUserApiKey(userInfoJSON.userID);
+      await this.pushUserApiKey(userInfoJSON.userID, apiKey || userInfoJSON.userID);
       await this.pushUserInfo(userInfoJSON);
     } catch (error) {
       console.error('Error pushing user data:', error);
     }
   }
 
-  async pushUserApiKey(userID: string): Promise<void> {
+  async pushUserApiKey(userID: string, apiKey: string): Promise<void> {
     const query = `
       INSERT INTO User_Api_Keys (userID, encrypted_user_id, encrypted_api_key)
       VALUES ($1, $2, $3)
@@ -194,7 +194,7 @@ export class DatabaseService {
         encrypted_user_id = EXCLUDED.encrypted_user_id,
         encrypted_api_key = EXCLUDED.encrypted_api_key,
         updated_at = CURRENT_TIMESTAMP`;
-    await db.query(query, [userKey(userID), encryptValue(userID), encryptValue(userID)]);
+    await db.query(query, [userKey(userID), encryptValue(userID), encryptValue(apiKey)]);
   }
 
   async pushUserInfo(userInfo: UserInfo): Promise<void> {
@@ -408,10 +408,10 @@ export class DatabaseService {
     const matchingRow = rows.find(
       (row) => row.encrypted_user_id && decryptValue(row.encrypted_api_key) === apiKey
     );
-    if (!matchingRow) {
+    if (!matchingRow || !matchingRow.encrypted_user_id) {
       return null;
     }
-    return decryptValue(matchingRow.encrypted_user_id!);
+    return decryptValue(matchingRow.encrypted_user_id);
   }
 
   async getStoredApiKey(userID: string): Promise<string> {
@@ -490,4 +490,5 @@ export class DatabaseService {
     return new Date(row.updated_at);
   }
 }
+
 export default new DatabaseService();
