@@ -17,43 +17,54 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from 'next/navigation';
 
+type VerificationStatus = 'idle' | 'loading' | 'success' | 'error';
+
 export default function Home() {
   const [inputValue, setInputValue] = useState('');
-  const [showGif, setShowGif] = useState(false);
+  const [status, setStatus] = useState<VerificationStatus>('idle');
   const router = useRouter();
+  const wait = (ms: number): Promise<void> => {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  };
   const handleAction = async (val: string) => {
+    if (!val.trim() || status === 'loading') return;
     setInputValue(val);
+
     if (val === 'mocksite') {
-      setShowGif(true);
+      setStatus('success');
       setTimeout(() => {
         router.push('/mocksite');
       }, 2000);
+      return;
     }
-    else {
-      const payload = {
-        apiKey: val
-      };
-      try {
-        const response = await fetch("http://localhost:5000/api/verify", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json', // Alert server that you are sending JSON
-          },
-          body: JSON.stringify(payload)
-        });
-        if (response.status === 200) {
-          setShowGif(true);
-          const data = await response.text();
-          console.log(data);
-        } else {
-          setShowGif(false);
-          const errorData = await response.json().catch(() => null);
-          console.error(errorData?.error || `HTTP error! status: ${response.status}`);
-        }
-      } catch (error) {
-        setShowGif(false);
-        console.error('Error verifying Canvas API Key:', error);
+
+    const payload = {
+      apiKey: val
+    };
+    setStatus('loading');
+    try {
+      const response = await fetch("http://localhost:5000/api/verify", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+      await wait(1000);
+      if (response.status === 200) {
+        setStatus('success');
+        const data = await response.text();
+        console.log(data);
+        await wait(1000);
+        router.push('/dashboard');
+      } else {
+        setStatus('error');
+        const errorData = await response.json().catch(() => null);
+        console.error(errorData?.error || `HTTP error! status: ${response.status}`);
       }
+    } catch (error) {
+      setStatus('error');
+      console.error('Error verifying Canvas API Key:', error);
     }
   }
   return (
@@ -80,6 +91,7 @@ export default function Home() {
                     id="input-demo-api-key"
                     type="password"
                     placeholder="sk-..."
+                    disabled={status === 'loading'}
                     className="border-input bg-muted/40 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -96,41 +108,32 @@ export default function Home() {
 
           <div className="flex w-full items-center justify-center pr-6 opacity-0 transition-opacity delay-75 duration-500 group-hover:opacity-100">
             <div className="relative h-20 w-20 overflow-hidden rounded-full ring-2 ring-border">
-
-              {(() => {
-                if (showGif) {
-                  return (
-                    <Image
-                      key="success-gif"
-                      src="/success_checkmark.gif"
-                      alt="Success"
-                      fill
-                      className="object-cover"
-                    />
-                  )
-                }
-                else if (!showGif && inputValue !== '' && inputValue !== 'mocksite') {
-                  return (
-                    <Image
-                      key={`failed-gif-${inputValue}`} // Using inputValue in key forces restart when they try again
-                      src="/failed_x.gif"
-                      alt="Failed"
-                      fill
-                      className="object-cover"
-                    />
-                  )
-                }
-                else {
-                  return (
-                    <Image
-                      src="/smile.jpg"
-                      alt="Default Smile"
-                      fill
-                      className="object-cover"
-                    />
-                  )
-                }
-              })()}
+              {status === 'success' && (
+                <Image
+                  key="success-gif"
+                  src="/success_checkmark.gif"
+                  alt="Success"
+                  fill
+                  className="object-cover"
+                />
+              )}
+              {status === 'error' && (
+                <Image
+                  key={`failed-gif-${inputValue}`} // Using inputValue in key forces restart when they try again
+                  src="/failed_x.gif"
+                  alt="Failed"
+                  fill
+                  className="object-cover"
+                />
+              )}
+              {(status === 'idle' || status === 'loading') && (
+                <Image
+                  src="/smile.jpg"
+                  alt="Default Smile"
+                  fill
+                  className="object-cover"
+                />
+              )}
             </div>
           </div>
         </Card>
