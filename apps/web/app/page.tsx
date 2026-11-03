@@ -58,7 +58,7 @@ export default function Home() {
         const data = await response.text();
         console.log(data);
         await wait(1000);
-        router.push('/dashboard');
+        router.push('/site/dashboard');
       } else {
         setStatus('error');
         const errorData = await response.json().catch(() => null);
