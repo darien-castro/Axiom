@@ -8,9 +8,10 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit", timeZone: "America/New_York", timeZoneName: "short",
 });
 
-export default function AssignmentFocusCard({ assignment, saved, onFocusAction }: {
+export default function AssignmentFocusCard({ assignment, saved, disabled = false, onFocusAction }: {
   assignment: FocusAssignment;
   saved: boolean;
+  disabled?: boolean;
   onFocusAction: (button: HTMLButtonElement) => void;
 }) {
   const hours = Math.floor(assignment.estimatedMinutes / 60);
@@ -40,7 +41,7 @@ export default function AssignmentFocusCard({ assignment, saved, onFocusAction }
       {assignment.availableUntil && <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">Available until <time dateTime={assignment.availableUntil}>{dateFormatter.format(new Date(assignment.availableUntil))}</time></p>}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
         <span className="text-xs text-muted-foreground">{saved ? "Saved in your personal focus list" : "Choose what deserves your attention"}</span>
-        <Button type="button" variant="outline" aria-pressed={saved}
+        <Button type="button" variant="outline" aria-pressed={saved} disabled={disabled}
           aria-label={`${saved ? "Remove from Focus" : "Add to Focus"}: ${assignment.title}`}
           onClick={(event) => onFocusAction(event.currentTarget)}
           className={`h-9 gap-2 rounded-lg px-3 ${saved ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700" : ""}`}>
