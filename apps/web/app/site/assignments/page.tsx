@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AssignmentFocusCard from "@/components/custom/focus/AssignmentFocusCard";
+import FocusConfirmation from "@/components/custom/focus/FocusConfirmation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { focusDemoAssignments } from "@/lib/focus-demo-data";
-import { assignmentKey, type DemoImportance } from "@/lib/focus-types";
+import { assignmentKey, type DemoImportance, type FocusAssignment } from "@/lib/focus-types";
 
 const importanceOrder: Record<DemoImportance, number> = { high: 0, medium: 1, low: 2 };
 
@@ -14,10 +15,45 @@ export default function AssignmentsPage() {
   const [tab, setTab] = useState<"all" | "focus">("all");
   const [sort, setSort] = useState("due");
   const [importance, setImportance] = useState("all");
+  // Milestone 2: session-only React state, not Canvas-account synchronization.
+  const [focusIds, setFocusIds] = useState<string[]>([]);
+  const [pendingAssignment, setPendingAssignment] = useState<FocusAssignment | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const compareAssignments = (a: FocusAssignment, b: FocusAssignment) =>
+    (sort === "importance" ? importanceOrder[a.demoImportance] - importanceOrder[b.demoImportance] : 0) || Date.parse(a.dueAt) - Date.parse(b.dueAt);
   const assignments = focusDemoAssignments
     .filter((assignment) => importance === "all" || assignment.demoImportance === importance)
     .slice()
-    .sort((a, b) => (sort === "importance" ? importanceOrder[a.demoImportance] - importanceOrder[b.demoImportance] : 0) || Date.parse(a.dueAt) - Date.parse(b.dueAt));
+    .sort(compareAssignments);
+  // All saved assignments remain visible regardless of the All Assignments filter.
+  const focusedAssignments = focusDemoAssignments.filter((assignment) => focusIds.includes(assignmentKey(assignment))).sort(compareAssignments);
+
+  function handleFocusAction(assignment: FocusAssignment, button: HTMLButtonElement) {
+    const id = assignmentKey(assignment);
+    if (focusIds.includes(id)) {
+      setFocusIds((current) => current.filter((savedId) => savedId !== id));
+      setFeedback(`${assignment.title} removed from My Focus List.`);
+      if (tab === "focus") document.getElementById("tab-focus")?.focus();
+    } else {
+      returnFocus.current = button;
+      setPendingAssignment(assignment);
+    }
+  }
+
+  function confirmFocus() {
+    if (!pendingAssignment) return;
+    const id = assignmentKey(pendingAssignment);
+    setFocusIds((current) => current.includes(id) ? current : [...current, id]);
+    setFeedback(`${pendingAssignment.title} added to My Focus List.`);
+    setPendingAssignment(null);
+  }
+
+  function renderAssignment(assignment: FocusAssignment) {
+    return <AssignmentFocusCard key={assignmentKey(assignment)} assignment={assignment}
+      saved={focusIds.includes(assignmentKey(assignment))}
+      onFocusAction={(button) => handleFocusAction(assignment, button)} />;
+  }
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8 p-6 md:p-10">
@@ -33,7 +69,7 @@ export default function AssignmentsPage() {
       </header>
 
       <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-        Sample schedule: November 2026. Effort estimates and importance are demonstration data, not live Canvas information or final-grade impact calculations. Saving assignments will be added in milestone 2.
+        Sample schedule: November 2026. Effort estimates and importance are demonstration data, not live Canvas information or final-grade impact calculations. Your personal focus selections last until you refresh or leave this page.
       </p>
 
       <div>
@@ -51,10 +87,11 @@ export default function AssignmentsPage() {
               }}
               variant={tab === value ? "secondary" : "ghost"}
               className={`h-10 rounded-xl px-4 text-sm ${tab === value ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700" : "text-muted-foreground"}`}>
-              {label}{value === "all" && <span className="ml-2 text-xs">{focusDemoAssignments.length}</span>}
+              {label}<span className="ml-2 text-xs">{value === "all" ? focusDemoAssignments.length : focusIds.length}</span>
             </Button>
           ))}
         </div>
+        <p role="status" aria-live="polite" aria-atomic="true" className="mt-3 min-h-5 text-xs text-emerald-700">{feedback}</p>
 
         <section id="panel-all" role="tabpanel" aria-labelledby="tab-all" hidden={tab !== "all"} tabIndex={0} className="pt-6">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -72,17 +109,28 @@ export default function AssignmentsPage() {
               </label>
             </div>
           </div>
-          <div className="flex flex-col gap-4">{assignments.map((assignment) => <AssignmentFocusCard key={assignmentKey(assignment)} assignment={assignment} />)}</div>
+          <div className="flex flex-col gap-4">{assignments.map(renderAssignment)}</div>
         </section>
 
         <section id="panel-focus" role="tabpanel" aria-labelledby="tab-focus" hidden={tab !== "focus"} tabIndex={0} className="pt-6">
-          <div className="rounded-2xl border border-dashed border-border bg-card/60 px-6 py-14 text-center">
+          {focusedAssignments.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-base font-semibold">My Focus List</h2>
+                <Button variant="outline" className="h-9 rounded-lg px-4" onClick={() => { setTab("all"); document.getElementById("tab-all")?.focus(); }}>Browse All Assignments</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Your personal selections, separate from demo-derived importance. Ordered by {sort === "due" ? "due date" : "importance"}.</p>
+              {focusedAssignments.map(renderAssignment)}
+            </div>
+          ) : <div className="rounded-2xl border border-dashed border-border bg-card/60 px-6 py-14 text-center">
             <h2 className="text-lg font-semibold">Your focus list starts here</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">This milestone previews your personal workspace. Adding assignments with bookmark controls and confirmation arrives in milestone 2.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">Choose Add to Focus on any assignment in All Assignments, then confirm to build your personal list.</p>
             <Button variant="outline" className="mt-5 h-9 rounded-lg px-4" onClick={() => { setTab("all"); document.getElementById("tab-all")?.focus(); }}>Browse All Assignments</Button>
-          </div>
+          </div>}
         </section>
       </div>
+      <FocusConfirmation assignment={pendingAssignment} returnFocus={returnFocus}
+        onCancel={() => setPendingAssignment(null)} onConfirm={confirmFocus} />
     </div>
   );
 }
