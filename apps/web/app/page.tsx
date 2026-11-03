@@ -71,10 +71,13 @@ export default function Home() {
   }
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 bg-background p-4 text-foreground">
-      <div className="">
-        <h1 className="font-sans font-bold text-5xl md:text-7xl tracking-wider pb-4
-             bg-gradient-to-r from-[#bf616a] via-[#a69490] to-[#84b38e] bg-clip-text text-transparent
-             border-b-2">Axiom</h1>
+      <div className="flex items-baseline gap-3">
+        <h1 className="font-sans text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
+          Axiom
+        </h1>
+        <span className="rounded-full border border-emerald-200/60 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/30 px-3 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">
+          @UNCC
+        </span>
       </div>
       <div className="flex flex-col items-center gap-6">
         <Card
