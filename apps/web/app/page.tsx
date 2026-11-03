@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from 'next/navigation';
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
 type VerificationStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -74,8 +76,12 @@ export default function Home() {
              bg-gradient-to-r from-[#bf616a] via-[#a69490] to-[#84b38e] bg-clip-text text-transparent
              border-b-2">Axiom</h1>
       </div>
-      <div>
-        <Card className="group flex w-[320px] flex-row items-center overflow-hidden border border-border bg-card shadow-xl transition-all duration-500 ease-out hover:w-[450px]">
+      <div className="flex flex-col items-center gap-6">
+        <Card
+          className={`group flex ${
+            status === 'success' ? 'w-[450px]' : 'w-[320px]'
+          } flex-row items-center overflow-hidden border border-border bg-card shadow-xl transition-all duration-500 ease-out hover:w-[450px]`}
+        >
           <div className="min-w-[320px] shrink-0">
             <CardHeader>
               <CardTitle className="text-lg text-card-foreground">
@@ -87,18 +93,18 @@ export default function Home() {
                 <FieldLabel htmlFor="input-demo-api-key" className="text-foreground/80">
                   API Key
                 </FieldLabel>
-                  <Input
-                    id="input-demo-api-key"
-                    type="password"
-                    placeholder="sk-..."
-                    disabled={status === 'loading'}
-                    className="border-input bg-muted/40 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAction(e.currentTarget.value);
-                      }
-                    }}
-                  />
+                <Input
+                  id="input-demo-api-key"
+                  type="password"
+                  placeholder="sk-..."
+                  disabled={status === 'loading'}
+                  className="border-input bg-muted/40 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAction(e.currentTarget.value);
+                    }
+                  }}
+                />
                 <FieldDescription className="text-muted-foreground">
                   Your API key is encrypted and stored securely.
                 </FieldDescription>
@@ -106,7 +112,11 @@ export default function Home() {
             </CardContent>
           </div>
 
-          <div className="flex w-full items-center justify-center pr-6 opacity-0 transition-opacity delay-75 duration-500 group-hover:opacity-100">
+          <div
+            className={`flex w-full items-center justify-center pr-6 ${
+              status === 'success' ? 'opacity-100' : 'opacity-0'
+            } transition-opacity delay-75 duration-500 group-hover:opacity-100`}
+          >
             <div className="relative h-20 w-20 overflow-hidden rounded-full ring-2 ring-border">
               {status === 'success' && (
                 <Image
@@ -137,6 +147,26 @@ export default function Home() {
             </div>
           </div>
         </Card>
+
+        <div className="flex items-center gap-3 w-full justify-center">
+          <Separator className="w-16 bg-border/60" />
+          <span className="text-xs uppercase tracking-wider text-muted-foreground/80 font-medium">or</span>
+          <Separator className="w-16 bg-border/60" />
+        </div>
+
+        <Button
+          variant="outline"
+          onClick={() => handleAction('mocksite')}
+          disabled={status === 'loading' || status === 'success'}
+          className="rounded-full px-6 py-2.5 h-auto text-sm font-medium border-border/80 bg-card/60 backdrop-blur-sm hover:bg-card hover:border-primary/50 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-2 group"
+        >
+          <span>{status === 'success' ? 'Entering Mocksite...' : 'Try Mocksite'}</span>
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            strokeWidth={2}
+            className="size-4 transition-transform duration-300 group-hover:translate-x-1"
+          />
+        </Button>
       </div>
     </div>
   );
