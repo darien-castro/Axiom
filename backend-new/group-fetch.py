@@ -1,4 +1,8 @@
 """Development CLI. Configure CANVAS_ACCESS_TOKEN before running."""
+
+# export CANVAS_ACCESS_TOKEN='YOUR-TOKEN-HERE'
+# python backend-new/request-test.py
+
 import os
 import sys
 from pathlib import Path

@@ -9,7 +9,7 @@ interface Course {
   name: string
   credits: number
   gradeLow: boolean
-  assignments: []
+  assignments: { name: string; weight: number }[]
 }
 // etc...
 interface Assignment{
@@ -20,6 +20,7 @@ interface Assignment{
 
 // individual nodes
 export class physNode {
+  gradeLow: boolean
   constructor(course: Course) {
     this.weight = course.credits + 1// weight...
     this.name = course.name

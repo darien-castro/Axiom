@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils"
 import { Engine } from "./engine"
 import { physNode } from "./engine"
 
+interface PhysicsViewProps { className?: string }
+
 interface Course {
   name: string;
   credits: number;
