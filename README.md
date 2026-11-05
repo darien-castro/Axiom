@@ -1,13 +1,11 @@
 # Axiom
 
----
-
 ## Table of Contents
 
 - [Project Overview](#project-overview)
 - [System Architecture](#system-architecture)
 - [Key Attributes & Features](#key-attributes--features)
-- [Current Project Status (Done vs. In Progress)](#current-project-status-done-vs-in-progress)
+- [Current Project Status](#current-project-status)
 - [Prerequisites](#prerequisites)
 - [Environment Variables (.env.example)](#environment-variables-envexample)
 
@@ -16,7 +14,7 @@
 
 ## Project Overview
 
-1. **Assignment Priority Index**: Identifies which impending tasks have the highest leverage over your course grade ($$\text{Urgency} \times \text{Weight \%}$$).
+1. **Assignment Priority Index**: Identifies which impending tasks have the highest leverage over your course grade.
 2. **Projected GPA Simulation**: Calculates estimated cumulative and semester GPAs based on current in-progress grades and remaining coursework weight.
 
 ---
