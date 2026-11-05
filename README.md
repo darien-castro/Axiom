@@ -96,7 +96,7 @@ DB_USER=postgres
 DB_PASSWORD=your_postgres_password
 DB_NAME=axiom
 
-PORT=5000                # macOS: AirPlay Receiver may use 5000; pick another port if so
+PORT=5000
 
 # Must decode to exactly 32 bytes (Base64 or 64-char hex)
 ENCRYPTION_KEY=generate_your_own
