@@ -69,7 +69,7 @@ Axiom-new/
 
 ---
 
-## Current Project Status (Done vs. In Progress)
+## Current Project Status
 
 ### Completed Features (Done)
 - [x] **Backend REST API Framework**: Express 5 + TypeScript server with health checks (`/healthz`) and CORS policies.
