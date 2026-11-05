@@ -33,12 +33,10 @@ export default function AssignmentFocusCard({ assignment, saved, disabled = fals
         </Badge>
       </div>
       <dl className="grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-        <div><dt className="text-muted-foreground">Assignment type</dt><dd className="mt-1 font-medium">{assignment.type}</dd></div>
         <div><dt className="text-muted-foreground">Points possible</dt><dd className="mt-1 font-medium">{assignment.pointsPossible} pts</dd></div>
         <div><dt className="text-muted-foreground">Estimated effort</dt><dd className="mt-1 font-medium">{effort}{assignment.type === "Major assessment" ? " (including preparation)" : ""}</dd></div>
-        <div><dt className="text-muted-foreground">Due</dt><dd className="mt-1 font-medium"><time dateTime={assignment.dueAt}>{dateFormatter.format(new Date(assignment.dueAt))}</time></dd></div>
+        <div><dt className="text-muted-foreground">Probable Grade Change</dt><dd className="mt-1 font-medium"> 2.4%</dd></div><div><dt className="text-muted-foreground">Due</dt><dd className="mt-1 font-medium"><time dateTime={assignment.dueAt}>{dateFormatter.format(new Date(assignment.dueAt))}</time></dd></div>
       </dl>
-      {assignment.availableUntil && <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">Available until <time dateTime={assignment.availableUntil}>{dateFormatter.format(new Date(assignment.availableUntil))}</time></p>}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
         <span className="text-xs text-muted-foreground">{saved ? "Saved in your personal focus list" : "Choose what deserves your attention"}</span>
         <Button type="button" variant="outline" aria-pressed={saved} disabled={disabled}
