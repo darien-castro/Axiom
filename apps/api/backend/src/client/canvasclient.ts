@@ -65,7 +65,7 @@ export class CanvasClient {
   async verifyKey(apiKey: string): Promise<boolean> {
     if (!apiKey || apiKey === '') { return false; }
     try {
-      const response = await fetch(`${this.m_baseURL}/users/self`, {
+      const response = await fetch(`${this.m_baseURL}/api/v1/users/self`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${apiKey}`,

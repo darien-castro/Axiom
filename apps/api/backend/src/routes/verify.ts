@@ -8,7 +8,7 @@ const router = Router();
 router.post('/verify', async (_req, res) => {
   const { apiKey } = _req.body;
   try {
-    const validKey: boolean = await routeService.userRequestedVerifyRoute(apiKey);
+    const validKey: boolean = await routeService.checkUser(apiKey);
     if (validKey) {
       // send over hashed key so they can store in browser, hash on our side as well,
       // and then when retreiving from database, we use local pepper to dehash and call
@@ -18,7 +18,7 @@ router.post('/verify', async (_req, res) => {
       res.send('Connection Successful!');
       // send to next page
     } else {
-      res.status(500).json({ error: 'API Key invalid' });
+      res.status(401).json({ error: 'API Key invalid' });
     }
   } catch (error) {
     res.status(500).json({ error: 'Failed to verify key' });
