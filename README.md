@@ -1,27 +1,41 @@
 # Axiom
 
+> **Academic Intelligence & Course Optimization Platform**  
+> An intelligent university workflow engine integrating directly with Canvas LMS to analyze student standings, project GPAs, rank high-impact assignments, and visualize coursework through an interactive 2D physics engine.
+
+---
+
 ## Table of Contents
 
 - [Project Overview](#project-overview)
 - [System Architecture](#system-architecture)
+- [Documentation Links](#documentation-links)
 - [Key Attributes & Features](#key-attributes--features)
-- [Current Project Status](#current-project-status)
+- [Current Project Status (Done vs. In Progress)](#current-project-status-done-vs-in-progress)
 - [Prerequisites](#prerequisites)
 - [Environment Variables (.env.example)](#environment-variables-envexample)
-
+- [Step-by-Step Installation Guide (Teacher / Evaluator Friendly)](#step-by-step-installation-guide-teacher--evaluator-friendly)
+- [How to Test the Application](#how-to-test-the-application)
+- [Database Schema Reference](#database-schema-reference)
+- [Backend API Endpoints](#backend-api-endpoints)
+- [Troubleshooting & FAQ](#troubleshooting--faq)
 
 ---
 
 ## Project Overview
 
-1. **Assignment Priority Index**: Identifies which impending tasks have the highest leverage over your course grade.
+Axiom is engineered to solve a common dilemma university students face: managing competing coursework deadlines without clear insight into which assignments disproportionately affect their final grades and overall GPA.
+
+Rather than treating every task as an identical checklist item, Axiom connects to Canvas LMS, ingests syllabi and grading weight distributions, and computes:
+1. **Assignment Priority Index**: Identifies which impending tasks have the highest leverage over your course grade ($$\text{Urgency} \times \text{Weight \%}$$).
 2. **Projected GPA Simulation**: Calculates estimated cumulative and semester GPAs based on current in-progress grades and remaining coursework weight.
+3. **Interactive Physics Graph**: A 2D simulation canvas representing courses and assignments as weighted physical nodes governed by credit hours, assignment points, and grade standing.
 
 ---
 
 ## System Architecture
 
-The project is structured as a monorepo containing two decoupled applications:
+The project is structured as a monorepo containing decoupled applications and documentation:
 
 ```
 Axiom-new/
@@ -45,10 +59,36 @@ Axiom-new/
 │       │   └── page.tsx           # Authentication & verification gateway
 │       ├── components/            # UI components (Shadcn + Tailwind v4)
 │       └── lib/                   # Utility helpers
+├── docs/                          # Project Documentation
+│   ├── README.md                  # Central documentation overview
+│   ├── backend/                   # Backend architecture, DB, Canvas client, crypto
+│   │   ├── README.md              # High-level backend overview
+│   │   ├── canvas-client.md       # Canvas REST & mock client
+│   │   ├── cryptography.md        # AES-256-GCM & HMAC-SHA256
+│   │   ├── database.md            # PostgreSQL schema & tables
+│   │   ├── data-mapper.md         # Data normalization
+│   │   └── routes-api.md          # REST API endpoints reference
+│   └── frontend/                  # Frontend views, sandbox, physics engine
+│       └── README.md              # High-level frontend overview
 ├── LICENSE
 └── README.md
 ```
 
+### Core Technologies
+- **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Hugeicons, Recharts, HTML5 Canvas 2D Physics Engine.
+- **Backend**: Express 5, TypeScript (`tsx`), PostgreSQL (`pg` connection pool), `node-addon-api` (C++ bindings).
+- **Security**: Authenticated AES-256-GCM encryption for stored user credentials, HMAC-SHA256 for blinded database indexing.
+
+---
+
+## Documentation Links
+
+For comprehensive subsystem deep-dives:
+- **[Central Documentation Hub](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/README.md)**
+- **[Backend Architecture & Guide](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/backend/README.md)**
+- **[Frontend Architecture & Guide](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/frontend/README.md)**
+
+---
 
 ## Key Attributes & Features
 
@@ -65,21 +105,52 @@ Axiom-new/
    - Encrypted with AES-256-GCM using unique random IVs and authentication tags.
    - Lookups in PostgreSQL are performed via deterministic HMAC-SHA256 hashes (`BYTEA`), preventing database enumeration.
 
+4. **Interactive 2D Physics Sandbox**:
+   - Canvas simulation that renders courses as gravitational bodies.
+   - Circle radii and mass scale dynamically with course credit hours; low grades trigger visual warning states.
+
+5. **Extensible C++ Computing Engine**:
+   - Incorporates a native C++ Node-API addon (`cpp_engine/src/addon.cc`) compiled with `node-gyp`, providing the foundation for intensive calculation algorithms and simulations.
+
 ---
 
-## Current Project Status
+## Current Project Status (Done vs. In Progress)
 
 ### Completed Features (Done)
 - [x] **Backend REST API Framework**: Express 5 + TypeScript server with health checks (`/healthz`) and CORS policies.
 - [x] **PostgreSQL Schema Auto-Initialization**: Automatically provisions 8 relational tables on startup (`initAllTables`) if they do not exist.
 - [x] **Cryptographic Security Layer**: AES-256-GCM encryption/decryption routines and HMAC-SHA256 keyed hashing (`crypto.ts`).
 - [x] **Canvas LMS REST Client**: Live fetch client (`CanvasClient.ts`) for user profile, courses, assignments, and submissions.
+- [x] **Offline Mock Client**: `MockCanvasClient.ts` with seeded courses, assignments, and grades for testing.
+- [x] **Data Normalization Pipeline**: `mapper.ts` for sanitizing Canvas responses into clean relational models.
+- [x] **Database Caching Layer**: Timestamp checks ensuring Canvas API calls are rate-limited to 20-minute windows.
 - [x] **API Route Handlers**:
+  - `POST /api/verify`: Verifies Canvas token and registers user.
+  - `POST /api/courses` & `POST /api/course`: Fetches enrolled courses and specific course details.
+  - `POST /api/assignments` & `POST /api/assignment`: Fetches assignments per course.
+  - `POST /api/submissions`: Fetches assignment submission records and scores.
+  - `POST /api/me`: Fetches authenticated student profile.
+  - `POST /api/dashboard`: Aggregates profile, courses, and grade info.
 - [x] **Frontend Authentication Portal**: Landing page (`/`) with real-time token validation state machine (`idle`, `loading`, `success`, `error`).
+- [x] **Evaluator Demo Bypass**: `mocksite` passkey to access the demo sandbox immediately.
 - [x] **Mocksite Sandbox (`/mocksite`)**:
+  - Assignment cards with time requirements, urgency badges, and grade impact tags.
+  - Interactive Recharts bubble/workload chart.
+  - Custom 2D Canvas physics engine with spring-like draggable nodes.
 - [x] **Main Dashboard UI Prototype (`/site/dashboard`)**:
+  - Enrolled course metrics and semester indicators.
+  - Featured "Next Important Assignment" priority card with risk assessments.
+  - Upcoming Canvas-synced assignment queue.
+  - Projected GPA card layout with detailed specifications.
+- [x] **C++ Native Addon Setup**: `binding.gyp` and `addon.cc` compiled successfully through `node-gyp`.
 
-
+### In Progress / Upcoming (Not Done / Roadmap)
+- [ ] **Connecting Frontend Dashboard to Live API**: Binding `/site/dashboard` directly to `POST /api/dashboard` (currently uses static prototype data while backend route is ready).
+- [ ] **Dynamic GPA Forecasting Algorithm**: Implementing the mathematical model that computes real-time projected cumulative and semester GPA based on remaining unweighted syllabus items.
+- [ ] **Automated Weight × Urgency Ranking**: Dynamic calculation of priority scoring using Canvas assignment groups and weight percentages.
+- [ ] **C++ Engine Algorithm Hookup**: Wiring native C++ functions into `engineService.ts` for heavy relational calculations.
+- [ ] **Automated Test Suite**: Unit and integration test coverage (`npm test`).
+- [ ] **Persistent Session Cookies / JWT**: Replacing client-side key transfer with secure HTTP-only session cookies.
 
 ---
 
@@ -108,6 +179,7 @@ Before running the project, ensure you have the following installed on your syst
   ```powershell
   npm install -g windows-build-tools
   ```
+
 ---
 
 ## Environment Variables (.env.example)
@@ -156,7 +228,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ---
 
-## Step-by-Step Installation Guide
+## Step-by-Step Installation Guide (Teacher / Evaluator Friendly)
 
 Follow these steps to set up and run the entire project from scratch.
 
@@ -236,5 +308,149 @@ psql -U postgres -c "CREATE DATABASE axiom;"
 
 ---
 
+## How to Test the Application
+
+Open your browser and navigate to: **`http://localhost:3000`**
+
+### Option A: Evaluator Quick Demo (No Canvas Account Required)
+1. On the landing page, in the **API Key** input box, type:
+   ```
+   mocksite
+   ```
+2. Click **Submit** (or press Enter).
+3. The application will immediately enter demo mode and redirect you to **`/mocksite`**.
+4. **What to explore on `/mocksite`:**
+   - **Assignment List (Left Panel)**: Review prioritized assignment cards tagged with urgency, impact percentages, and time estimates.
+   - **Workload Chart (Top Right)**: Interactive timeline and bubble distribution chart.
+   - **Physics Sandbox (Bottom Right)**: Interactive 2D simulation. Click and drag nodes; observe how course nodes gravitate and adjust sizes based on credits and performance.
+
+### Option B: Live Canvas LMS Authentication
+1. Obtain an API access token from your Canvas instance (*Canvas -> Account -> Settings -> Approved Integrations -> New Access Token*).
+2. Paste the token into the **API Key** field on the landing page and click **Submit**.
+3. The backend will verify the token against Canvas, sync your profile and courses into the encrypted PostgreSQL database, and redirect you to **`/site/dashboard`**.
+
+---
+
+## Database Schema Reference
+
+Axiom automatically provisions the following relational schema in PostgreSQL on startup:
+
+```mermaid
+erDiagram
+    Users ||--o{ User_Api_Keys : "has"
+    Users ||--o{ User_Info : "has"
+    Users ||--o{ User_Courses : "enrolls in"
+    Users ||--o{ Updates : "logs"
+    Course ||--o{ User_Courses : "contains"
+    Course ||--o{ Assignment : "assigns"
+    Course ||--o{ Submission : "records"
+    Users ||--o{ Submission : "submits"
+
+    Users {
+        BYTEA userID PK "HMAC-SHA256 hashed ID"
+    }
+
+    User_Api_Keys {
+        BYTEA userID PK,FK "References Users"
+        TEXT encrypted_user_id "AES-256-GCM encrypted"
+        TEXT encrypted_api_key "AES-256-GCM encrypted"
+        TIMESTAMP updated_at
+    }
+
+    User_Info {
+        BYTEA userID PK,FK "References Users"
+        TEXT first_name
+        TEXT last_name
+        TIMESTAMP updated_at
+    }
+
+    Course {
+        VARCHAR courseID PK
+        VARCHAR course_name
+        VARCHAR course_term
+        VARCHAR course_term_id
+        VARCHAR course_code
+        VARCHAR course_section
+        VARCHAR courseDepartment
+    }
+
+    User_Courses {
+        BYTEA userID PK,FK
+        VARCHAR courseID PK,FK
+        TEXT grade "Encrypted grade"
+    }
+
+    Assignment {
+        VARCHAR assignmentID PK
+        VARCHAR name
+        VARCHAR type
+        TEXT grade
+        FLOAT points
+        VARCHAR courseID FK
+    }
+
+    Submission {
+        VARCHAR submissionID PK
+        VARCHAR assignmentID
+        VARCHAR courseID
+        BYTEA userID
+        TEXT score
+        TEXT grade
+        TEXT submitted_at
+    }
+
+    Updates {
+        SERIAL updateID PK
+        BYTEA userID FK
+        TIMESTAMP updated_at
+    }
+```
+
+---
+
+## Backend API Endpoints
+
+All endpoints are hosted on port `5000` (default) under the `/api` prefix:
+
+| Endpoint | Method | Request Body | Description |
+| :--- | :--- | :--- | :--- |
+| `/healthz` | `GET` | *None* | Basic health check returning `{ ok: true, status: 'healthy' }` |
+| `/api/verify` | `POST` | `{ "apiKey": "string" }` | Verifies Canvas bearer token with Canvas and records user in DB |
+| `/api/courses` | `POST` | `{ "apiKey": "string" }` | Returns list of sanitized courses enrolled by the user |
+| `/api/course` | `POST` | `{ "apiKey": "string", "courseID": "string" }` | Returns details for an individual course |
+| `/api/assignments`| `POST` | `{ "apiKey": "string", "courseID": "string" }` | Returns assignments for a given course |
+| `/api/assignment` | `POST` | `{ "apiKey": "string", "courseID": "string", "assignmentID": "string" }` | Returns specific assignment details |
+| `/api/submissions`| `POST` | `{ "apiKey": "string", "courseID": "string" }` | Returns student submission states and scores |
+| `/api/me` | `POST` | `{ "apiKey": "string" }` | Returns user personal profile info |
+| `/api/dashboard` | `POST` | `{ "apiKey": "string" }` | Aggregates profile, enrolled courses, and grade info |
+
+---
+
+## Troubleshooting & FAQ
+
+### 1. `error: password authentication failed for user "postgres"`
+- Open `apps/api/backend/.env` and update `DB_USER` and `DB_PASSWORD` to match your local PostgreSQL credentials.
+
+### 2. `error: database "axiom" does not exist`
+- Run `createdb -U postgres axiom` or execute `CREATE DATABASE axiom;` in `psql`.
+
+### 3. `Error: ENCRYPTION_KEY environment variable is required / must decode to 32 bytes`
+- Verify that `apps/api/backend/.env` exists.
+- Ensure `ENCRYPTION_KEY` is a valid 32-byte Base64 or 64-character Hex string (see [Environment Variables](#environment-variables-envexample)).
+
+### 4. `node-gyp` or native build failures during `npm install`
+- Ensure build tools and Python 3 are installed:
+  - Linux: `sudo apt install build-essential python3`
+  - macOS: `xcode-select --install`
+  - Windows: `npm install -g windows-build-tools`
+
+### 5. Port Conflicts
+- The backend defaults to port `5000` (`PORT=5000` in `.env`).
+- The frontend defaults to port `3000`.
+- If either port is in use, check running processes with `lsof -i :5000` or `lsof -i :3000` and stop conflicting services.
+
+---
+
+## Authors & Acknowledgments
 
 Developed as an academic software engineering project exploring Canvas API integration, relational database design, secure data pipelines, and interactive academic simulations.
