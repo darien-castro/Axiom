@@ -135,11 +135,20 @@ Base URL `http://localhost:5000`. All `/api` routes are `POST` with a JSON body.
 | `/api/verify` | `apiKey` | Validates token, records user |
 | `/api/me` | `apiKey` | User profile |
 | `/api/courses` | `apiKey` | Enrolled courses |
-| `/api/course` | `apiKey`, `courseID` | One course |
+| `/api/course` | `apiKey`, `courseID` | One course |7301~rrLNtRKHrnt7KvuF3mUThmutzcvfQcWPaAumnTtxe7vCxkQywCu42AeATVNkFk8L
 | `/api/assignments` | `apiKey`, `courseID` | Course assignments |
 | `/api/assignment` | `apiKey`, `courseID`, `assignmentID` | One assignment |
 | `/api/submissions` | `apiKey`, `courseID` | Submission states and scores |
 | `/api/dashboard` | `apiKey` | Profile, courses, and grades |
+
+
+## Screenshots
+
+<img width="1887" height="1010" alt="261104_22h16m34s_screenshot" src="https://github.com/user-attachments/assets/e3e05fc9-c6d6-42cc-81f8-e7cbd5273f5d" />
+
+<img width="1886" height="1007" alt="261104_22h17m07s_screenshot" src="https://github.com/user-attachments/assets/ba0a311f-1db5-4c8a-b42e-71bc63ef52dd" />
+
+
 
 ## License
 
