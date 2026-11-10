@@ -1,43 +1,50 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import cookieSession from 'cookie-session';
 import cors from 'cors';
 import crypto from './crypto/crypto';
 
 // user classes
-import db from './services/databaseService'
+import db from './services/databaseService';
 
 // route stuff
 const app = express();
 const PORT = process.env.PORT || 5000;
-import verifyRoute from './routes/verify'
-import coursesRoute from './routes/courses'
-import courseRoute from './routes/course'
-import assignmentsRoute from './routes/assignments'
-import assignmentRoute from './routes/assignment'
-import submissionsRoute from './routes/submissions'
-import selfRoute from './routes/me'
-import dashboardRoute from './routes/dashboard'
-
+import verifyRoute from './routes/verify';
+import coursesRoute from './routes/courses';
+import courseRoute from './routes/course';
+import assignmentsRoute from './routes/assignments';
+import assignmentRoute from './routes/assignment';
+import submissionsRoute from './routes/submissions';
+import selfRoute from './routes/me';
+import dashboardRoute from './routes/dashboard';
 
 db.initAllTables();
-
 
 // Basic health check route
 app.get('/healthz', (_req: Request, res: Response) => {
   res.json({ ok: true, status: 'healthy' });
 });
 
-
 // ideally, once released, would only allow access from one server
-app.use(cors(
-  {
+app.use(
+  cors({
     origin: 'http://localhost:3000',
-  }
-));
+    credentials: true,
+  })
+);
+
+app.use(
+  cookieSession({
+    name: 'session',
+    keys: ['examplelol'],
+    maxAge: 24 * 60 * 60 * 1000,
+  })
+);
 
 // main routes
-app.get("/", (req, res) => {
-    res.send("Connection Successful!");
+app.get('/', (req, res) => {
+  res.send('Connection Successful!');
 });
 
 app.use(express.json());
@@ -46,12 +53,12 @@ app.use('/api', coursesRoute);
 app.use('/api', courseRoute);
 app.use('/api', assignmentsRoute);
 app.use('/api', assignmentRoute);
-app.use('/api', submissionsRoute)
-app.use('/api', selfRoute)
-app.use('/api', dashboardRoute)
+app.use('/api', submissionsRoute);
+app.use('/api', selfRoute);
+app.use('/api', dashboardRoute);
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
 export { app, crypto };
 export default app;

@@ -3,10 +3,14 @@
 
 import { Router } from 'express';
 import routeService, { CleanCourseAssignment } from '../services/routeService';
+import authenticateSession from '../middleware/auth';
+
 const router = Router();
 
-router.post('/courses/:courseID/assignments', async (_req, res) => {
-  const { apiKey } = _req.body;
+router.use(authenticateSession);
+
+const handleAssignments = async (_req: any, res: any) => {
+  const apiKey = _req.apiKey || _req.body?.apiKey;
   const courseID = _req.params.courseID;
   try {
     const cleanAssignments: CleanCourseAssignment[] | null = await routeService.userRequestedAssignmentsRoute(apiKey, courseID);
@@ -18,6 +22,9 @@ router.post('/courses/:courseID/assignments', async (_req, res) => {
   } catch (error) {
     res.status(500).json({ error: `${error}` });
   }
-});
+};
+
+router.get('/courses/:courseID/assignments', handleAssignments);
+router.post('/courses/:courseID/assignments', handleAssignments);
 
 export default router;

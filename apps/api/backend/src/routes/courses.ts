@@ -5,10 +5,14 @@
 
 import { Router } from 'express';
 import routeService, { CleanCourse } from '../services/routeService';
+import authenticateSession from '../middleware/auth';
+
 const router = Router();
 
-router.post('/courses', async (_req, res) => {
-  const { apiKey } = _req.body;
+router.use(authenticateSession);
+
+const handleCourses = async (_req: any, res: any) => {
+  const apiKey = _req.apiKey || _req.body?.apiKey;
   try {
     const cleanCourses: CleanCourse[] | null = await routeService.userRequestedCoursesRoute(apiKey);
     if (!cleanCourses) {
@@ -19,6 +23,9 @@ router.post('/courses', async (_req, res) => {
   } catch (error) {
     res.status(500).json({ error: `${error}` });
   }
-});
+};
+
+router.get('/courses', handleCourses);
+router.post('/courses', handleCourses);
 
 export default router;

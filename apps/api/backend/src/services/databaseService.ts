@@ -90,7 +90,8 @@ export class DatabaseService {
         course_code VARCHAR(50),
         course_section VARCHAR(50),
         courseDepartment VARCHAR(255)
-      );\n      ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_term_id VARCHAR(50);
+      );
+      ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_term_id VARCHAR(50);
       ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_code VARCHAR(50);
     `;
     await db.query(query);
@@ -110,7 +111,8 @@ export class DatabaseService {
 
   async createAssignmentTable(): Promise<void> {
     const query = `
-      CREATE TABLE IF NOT EXISTS Assignment (\n        assignmentID VARCHAR(255) PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS Assignment (
+        assignmentID VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         type VARCHAR(255),
         grade TEXT,
@@ -152,6 +154,16 @@ export class DatabaseService {
     await db.query(query);
   }
 
+  async createSessionTable(): Promise<void> {
+    const query = `
+      CREATE TABLE IF NOT EXISTS Sessions (
+        session_key VARCHAR(255) PRIMARY KEY,
+        api_key TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`;
+    await db.query(query);
+  }
+
   async initAllTables(): Promise<void> {
     console.log('Initializing PostgreSQL schema...');
     try {
@@ -163,6 +175,7 @@ export class DatabaseService {
       await this.createAssignmentTable();
       await this.createSubmissionTable();
       await this.createUpdateTable();
+      await this.createSessionTable();
       console.log('All tables created successfully!');
     } catch (error) {
       console.error('Error creating tables:', error);
@@ -485,6 +498,50 @@ export class DatabaseService {
       return null;
     }
     return new Date(row.updated_at);
+  }
+
+  async insertSessionKey(sessionKey: string, apiKey: string): Promise<void> {
+    try {
+      const query = `
+        INSERT INTO Sessions (session_key, api_key)
+        VALUES ($1, $2)
+        ON CONFLICT (session_key) DO UPDATE SET
+          api_key = EXCLUDED.api_key,
+          created_at = CURRENT_TIMESTAMP`;
+      await db.query(query, [sessionKey, apiKey]);
+    } catch (error) {
+      console.error('Error inserting session key:', error);
+      throw error;
+    }
+  }
+
+  async getSessionApiKey(sessionKey: string): Promise<string | null> {
+    try {
+      const { rows } = await db.query(
+        'SELECT api_key FROM Sessions WHERE session_key = $1',
+        [sessionKey]
+      );
+      if (rows.length === 0 || !rows[0].api_key) {
+        return null;
+      }
+      return rows[0].api_key;
+    } catch (error) {
+      console.error('Error retrieving session key:', error);
+      return null;
+    }
+  }
+
+  async isSessionValid(sessionKey: string): Promise<boolean> {
+    const apiKey = await this.getSessionApiKey(sessionKey);
+    return apiKey !== null;
+  }
+
+  async deleteSessionKey(sessionKey: string): Promise<void> {
+    try {
+      await db.query('DELETE FROM Sessions WHERE session_key = $1', [sessionKey]);
+    } catch (error) {
+      console.error('Error deleting session key:', error);
+    }
   }
 }
 

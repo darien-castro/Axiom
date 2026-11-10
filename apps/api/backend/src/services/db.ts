@@ -1,4 +1,5 @@
 // db.ts
+import 'dotenv/config';
 import { Pool } from 'pg';
 
 const db = new Pool({
