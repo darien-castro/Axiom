@@ -1,10 +1,14 @@
 // /api/courses/:courseID/submissions
 import { Router } from 'express';
 import routeService, { CanvasSubmission } from '../services/routeService';
+import authenticateSession from '../middleware/auth';
+
 const router = Router();
 
-router.post('/courses/:courseID/submissions', async (_req, res) => {
-  const { apiKey } = _req.body;
+router.use(authenticateSession);
+
+const handleSubmissions = async (_req: any, res: any) => {
+  const apiKey = _req.apiKey || _req.body?.apiKey;
   const courseID = _req.params.courseID;
   try {
     const submissions: CanvasSubmission[] | null = await routeService.userRequestedSubmissionsRoute(apiKey, courseID);
@@ -17,6 +21,9 @@ router.post('/courses/:courseID/submissions', async (_req, res) => {
   } catch (error) {
     res.status(500).json({ error: `${error}` });
   }
-});
+};
+
+router.get('/courses/:courseID/submissions', handleSubmissions);
+router.post('/courses/:courseID/submissions', handleSubmissions);
 
 export default router;

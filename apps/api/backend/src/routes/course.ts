@@ -3,10 +3,14 @@
 
 import { Router } from 'express';
 import routeService, { CanvasCourse } from '../services/routeService';
+import authenticateSession from '../middleware/auth';
+
 const router = Router();
 
-router.post('/courses/:courseID', async (_req, res) => {
-  const { apiKey } = _req.body;
+router.use(authenticateSession);
+
+const handleCourse = async (_req: any, res: any) => {
+  const apiKey = _req.apiKey || _req.body?.apiKey;
   const courseID = _req.params.courseID;
   try {
     const course: CanvasCourse | null = await routeService.userRequestedCourseRoute(apiKey, courseID);
@@ -18,6 +22,9 @@ router.post('/courses/:courseID', async (_req, res) => {
   } catch (error) {
     res.status(500).json({ error: `${error}` });
   }
-});
+};
+
+router.get('/courses/:courseID', handleCourse);
+router.post('/courses/:courseID', handleCourse);
 
 export default router;
