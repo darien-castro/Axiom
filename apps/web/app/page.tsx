@@ -25,13 +25,23 @@ export default function Home() {
   const [inputValue, setInputValue] = useState('');
   const [status, setStatus] = useState<VerificationStatus>('idle');
   const router = useRouter();
+
+  const checkForCookie = async () => {
+    const cookieName = 'AxiomCookie';
+    const exists = document.cookie.split('; ').some((row) => row.startsWith(`${cookieName}=`));
+    if (exists) {
+      // try catch block for verfication to see if cookie is valid
+      // if valid push to site
+      router.push('/site/dashboard');
+    }
+  }
+
   const wait = (ms: number): Promise<void> => {
     return new Promise((resolve) => setTimeout(resolve, ms));
   };
   const handleAction = async (val: string) => {
     if (!val.trim() || status === 'loading') return;
     setInputValue(val);
-
     if (val === 'mocksite') {
       setStatus('success');
       setTimeout(() => {

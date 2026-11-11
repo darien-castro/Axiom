@@ -36,9 +36,10 @@ app.use(
 
 app.use(
   cookieSession({
-    name: 'session',
+    name: 'AxiomCookie',
     keys: ['examplelol'],
     maxAge: 24 * 60 * 60 * 1000,
+    httpOnly: false,
   })
 );
 
