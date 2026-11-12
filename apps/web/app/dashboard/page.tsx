@@ -1,6 +1,3 @@
-export default Page(){
-  
-  return (
-    
-  )
+export default function Page() {
+  return null;
 }
