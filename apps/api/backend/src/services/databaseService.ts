@@ -1,4 +1,4 @@
-import db from './db';
+import prisma from './db';
 import crypto, { decryptValue, encryptValue } from '../crypto/crypto';
 
 export interface UserInfo {
@@ -23,21 +23,12 @@ export interface GradeInfo {
   grade: string;
 }
 
-interface UpdateRow {
-  updated_at: Date | string;
-}
-
-interface UserApiKeyRow {
-  encrypted_api_key: string;
-}
-
-interface UserInfoRow {
-  first_name: string;
-  last_name: string;
-}
-
-function userKey(userID: string): Buffer {
-  return crypto.hmacLookup(userID);
+function userKey(userID: string): Uint8Array<ArrayBuffer> {
+  const buf = crypto.hmacLookup(userID);
+  const ab = new ArrayBuffer(buf.byteLength);
+  const u8 = new Uint8Array(ab);
+  u8.set(buf);
+  return u8;
 }
 
 function encryptedNullable(value: string | number | null | undefined): string | null {
@@ -52,36 +43,46 @@ export class DatabaseService {
   constructor() {}
 
   async createUserTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Users (
         userID BYTEA PRIMARY KEY
-      )`;
-    await db.query(query);
+      )`);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Users ADD COLUMN IF NOT EXISTS first_name VARCHAR(255)
+    `);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Users ADD COLUMN IF NOT EXISTS last_name VARCHAR(255)
+    `);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE Users ALTER COLUMN first_name DROP NOT NULL
+    `);
   }
 
   async createUserApiKeyTable(): Promise<void> {
-    const query = `CREATE TABLE IF NOT EXISTS User_Api_Keys (
-      userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
-      encrypted_user_id TEXT,
-      encrypted_api_key TEXT NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    ALTER TABLE User_Api_Keys ADD COLUMN IF NOT EXISTS encrypted_user_id TEXT;`;
-    await db.query(query);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS User_Api_Keys (
+        userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+        encrypted_user_id TEXT,
+        encrypted_api_key TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE User_Api_Keys ADD COLUMN IF NOT EXISTS encrypted_user_id TEXT
+    `);
   }
 
   async createUserInfoTable(): Promise<void> {
-    const query = `CREATE TABLE IF NOT EXISTS User_Info (
-      userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
-      first_name TEXT NOT NULL,
-      last_name TEXT,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`;
-    await db.query(query);
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS User_Info (
+        userID BYTEA PRIMARY KEY REFERENCES Users(userID) ON DELETE CASCADE,
+        first_name TEXT NOT NULL,
+        last_name TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
   }
 
   async createCourseTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Course (
         courseID VARCHAR(255) PRIMARY KEY,
         course_name VARCHAR(255) NOT NULL,
@@ -90,27 +91,24 @@ export class DatabaseService {
         course_code VARCHAR(50),
         course_section VARCHAR(50),
         courseDepartment VARCHAR(255)
-      );
-      ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_term_id VARCHAR(50);
-      ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_code VARCHAR(50);
-    `;
-    await db.query(query);
+      )`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_term_id VARCHAR(50)`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Course ADD COLUMN IF NOT EXISTS course_code VARCHAR(50)`);
   }
 
   async createUserCoursesTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS User_Courses (
         userID BYTEA REFERENCES Users(userID),
         courseID VARCHAR(255) REFERENCES Course(courseID),
         grade TEXT,
         PRIMARY KEY (userID, courseID)
-      )`;
-    await db.query(query);
-    await db.query('ALTER TABLE User_Courses ALTER COLUMN grade TYPE TEXT');
+      )`);
+    await prisma.$executeRawUnsafe('ALTER TABLE User_Courses ALTER COLUMN grade TYPE TEXT');
   }
 
   async createAssignmentTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Assignment (
         assignmentID VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
@@ -118,15 +116,13 @@ export class DatabaseService {
         grade TEXT,
         points FLOAT,
         courseID VARCHAR(255) REFERENCES Course(courseID)
-      );
-      ALTER TABLE Assignment ADD COLUMN IF NOT EXISTS points FLOAT;
-      ALTER TABLE Assignment ALTER COLUMN grade TYPE TEXT;
-    `;
-    await db.query(query);
+      )`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Assignment ADD COLUMN IF NOT EXISTS points FLOAT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Assignment ALTER COLUMN grade TYPE TEXT`);
   }
 
   async createSubmissionTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Submission (
         submissionID VARCHAR(255) PRIMARY KEY,
         assignmentID VARCHAR(255),
@@ -135,38 +131,34 @@ export class DatabaseService {
         score TEXT,
         grade TEXT,
         submitted_at TEXT
-      )`;
-    await db.query(query);
-    await db.query(`
-      ALTER TABLE Submission ALTER COLUMN score TYPE TEXT;
-      ALTER TABLE Submission ALTER COLUMN grade TYPE TEXT;
-      ALTER TABLE Submission ALTER COLUMN submitted_at TYPE TEXT;
-    `);
+      )`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Submission ALTER COLUMN score TYPE TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Submission ALTER COLUMN grade TYPE TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE Submission ALTER COLUMN submitted_at TYPE TEXT`);
   }
 
   async createUpdateTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Updates (
         updateID SERIAL PRIMARY KEY,
         userID BYTEA REFERENCES Users(userID),
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`;
-    await db.query(query);
+      )`);
   }
 
   async createSessionTable(): Promise<void> {
-    const query = `
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS Sessions (
         session_key VARCHAR(255) PRIMARY KEY,
         api_key TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`;
-    await db.query(query);
+      )`);
   }
 
   async initAllTables(): Promise<void> {
-    console.log('Initializing PostgreSQL schema...');
+    console.log('Connecting to database via Prisma and initializing schema...');
     try {
+      await prisma.$connect();
       await this.createUserTable();
       await this.createUserApiKeyTable();
       await this.createUserInfoTable();
@@ -176,75 +168,94 @@ export class DatabaseService {
       await this.createSubmissionTable();
       await this.createUpdateTable();
       await this.createSessionTable();
-      console.log('All tables created successfully!');
+      console.log('All tables verified and initialized successfully!');
     } catch (error) {
-      console.error('Error creating tables:', error);
+      console.error('Error initializing tables via Prisma:', error);
     }
   }
 
   async pushGeneralUserInfo(userInfoJSON: UserInfo, apiKey?: string): Promise<void> {
     try {
-      const userID = userKey(userInfoJSON.userID);
-      await db.query(
-        'INSERT INTO Users (userID) VALUES ($1) ON CONFLICT (userID) DO NOTHING',
-        [userID]
-      );
+      const key = userKey(userInfoJSON.userID);
+      await prisma.user.upsert({
+        where: { userId: key },
+        update: {
+          firstName: userInfoJSON.firstName || '',
+          lastName: userInfoJSON.lastName || null,
+        },
+        create: {
+          userId: key,
+          firstName: userInfoJSON.firstName || '',
+          lastName: userInfoJSON.lastName || null,
+        },
+      });
       await this.pushUserApiKey(userInfoJSON.userID, apiKey || userInfoJSON.userID);
       await this.pushUserInfo(userInfoJSON);
     } catch (error) {
       console.error('Error pushing user data:', error);
+      throw error;
     }
   }
 
   async pushUserApiKey(userID: string, apiKey: string): Promise<void> {
-    const query = `
-      INSERT INTO User_Api_Keys (userID, encrypted_user_id, encrypted_api_key)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (userID) DO UPDATE SET
-        encrypted_user_id = EXCLUDED.encrypted_user_id,
-        encrypted_api_key = EXCLUDED.encrypted_api_key,
-        updated_at = CURRENT_TIMESTAMP`;
-    await db.query(query, [userKey(userID), encryptValue(userID), encryptValue(apiKey)]);
+    const key = userKey(userID);
+    await prisma.userApiKey.upsert({
+      where: { userId: key },
+      update: {
+        encryptedUserId: encryptValue(userID),
+        encryptedApiKey: encryptValue(apiKey),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: key,
+        encryptedUserId: encryptValue(userID),
+        encryptedApiKey: encryptValue(apiKey),
+        updatedAt: new Date(),
+      },
+    });
   }
 
   async pushUserInfo(userInfo: UserInfo): Promise<void> {
-    const query = `
-      INSERT INTO User_Info (userID, first_name, last_name)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (userID) DO UPDATE SET
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        updated_at = CURRENT_TIMESTAMP`;
-    await db.query(query, [
-      userKey(userInfo.userID),
-      encryptValue(userInfo.firstName),
-      encryptValue(userInfo.lastName),
-    ]);
+    const key = userKey(userInfo.userID);
+    await prisma.userInfo.upsert({
+      where: { userId: key },
+      update: {
+        firstName: encryptValue(userInfo.firstName),
+        lastName: encryptValue(userInfo.lastName),
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: key,
+        firstName: encryptValue(userInfo.firstName),
+        lastName: encryptValue(userInfo.lastName),
+        updatedAt: new Date(),
+      },
+    });
   }
 
   async pushCourseInformation(courseInfoJSON: CourseInfo[]): Promise<void> {
     try {
       for (const course of courseInfoJSON) {
-        const query = `
-          INSERT INTO Course (courseID, course_name, course_term, course_term_id, course_code, course_section, courseDepartment)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (courseID) DO UPDATE SET
-            course_name = EXCLUDED.course_name,
-            course_term = EXCLUDED.course_term,
-            course_term_id = EXCLUDED.course_term_id,
-            course_code = EXCLUDED.course_code,
-            course_section = EXCLUDED.course_section,
-            courseDepartment = EXCLUDED.courseDepartment`;
-        const values = [
-          course.courseID,
-          course.courseName,
-          course.courseTerm || null,
-          course.courseTermId || null,
-          course.courseCode || null,
-          course.courseSection || null,
-          course.courseDepartment || null,
-        ];
-        await db.query(query, values);
+        await prisma.course.upsert({
+          where: { courseId: course.courseID },
+          update: {
+            courseName: course.courseName,
+            courseTerm: course.courseTerm || null,
+            courseTermId: course.courseTermId || null,
+            courseCode: course.courseCode || null,
+            courseSection: course.courseSection || null,
+            courseDepartment: course.courseDepartment || null,
+          },
+          create: {
+            courseId: course.courseID,
+            courseName: course.courseName,
+            courseTerm: course.courseTerm || null,
+            courseTermId: course.courseTermId || null,
+            courseCode: course.courseCode || null,
+            courseSection: course.courseSection || null,
+            courseDepartment: course.courseDepartment || null,
+          },
+        });
       }
     } catch (error) {
       console.error('Error pushing course data:', error);
@@ -253,12 +264,21 @@ export class DatabaseService {
 
   async pushUserCourses(userID: string, courseIDs: string[]): Promise<void> {
     try {
+      const key = userKey(userID);
       for (const courseID of courseIDs) {
-        const query = `
-          INSERT INTO User_Courses (userID, courseID)
-          VALUES ($1, $2)
-          ON CONFLICT (userID, courseID) DO NOTHING`;
-        await db.query(query, [userKey(userID), courseID]);
+        await prisma.userCourse.upsert({
+          where: {
+            userId_courseId: {
+              userId: key,
+              courseId: courseID,
+            },
+          },
+          update: {},
+          create: {
+            userId: key,
+            courseId: courseID,
+          },
+        });
       }
     } catch (error) {
       console.error('Error pushing user courses:', error);
@@ -266,15 +286,22 @@ export class DatabaseService {
   }
 
   async getUserCourses(userID: string): Promise<any[]> {
-    const query = `
-      SELECT c.courseID, c.course_name as "courseName", c.course_term as "courseTerm",
-             c.course_term_id as "courseTermId", c.course_code as "courseCode",
-             c.course_section as "courseSection", c.courseDepartment
-      FROM Course c
-      JOIN User_Courses uc ON c.courseID = uc.courseID
-      WHERE uc.userID = $1`;
-    const { rows } = await db.query(query, [userKey(userID)]);
-    return rows;
+    const key = userKey(userID);
+    const userCourses = await prisma.userCourse.findMany({
+      where: { userId: key },
+      include: {
+        course: true,
+      },
+    });
+    return userCourses.map((uc) => ({
+      courseID: uc.course.courseId,
+      courseName: uc.course.courseName,
+      courseTerm: uc.course.courseTerm,
+      courseTermId: uc.course.courseTermId,
+      courseCode: uc.course.courseCode,
+      courseSection: uc.course.courseSection,
+      courseDepartment: uc.course.courseDepartment,
+    }));
   }
 
   async pushAssignments(courseID: string, assignments: any[]): Promise<void> {
@@ -287,23 +314,24 @@ export class DatabaseService {
         const points = a.points_possible ?? a.assignmentPoints ?? a.points ?? null;
         const grade = a.grade ?? null;
 
-        const query = `
-          INSERT INTO Assignment (assignmentID, name, type, grade, points, courseID)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          ON CONFLICT (assignmentID) DO UPDATE SET
-            name = EXCLUDED.name,
-            type = EXCLUDED.type,
-            grade = EXCLUDED.grade,
-            points = EXCLUDED.points,
-            courseID = EXCLUDED.courseID`;
-        await db.query(query, [
-          String(id),
-          name,
-          type,
-          grade,
-          points,
-          String(courseID),
-        ]);
+        await prisma.assignment.upsert({
+          where: { assignmentId: String(id) },
+          update: {
+            name,
+            type,
+            grade,
+            points: points !== null && points !== undefined ? Number(points) : null,
+            courseId: String(courseID),
+          },
+          create: {
+            assignmentId: String(id),
+            name,
+            type,
+            grade,
+            points: points !== null && points !== undefined ? Number(points) : null,
+            courseId: String(courseID),
+          },
+        });
       }
     } catch (error) {
       console.error('Error pushing assignments:', error);
@@ -311,47 +339,58 @@ export class DatabaseService {
   }
 
   async getAssignments(courseID: string): Promise<any[]> {
-    const { rows } = await db.query('SELECT * FROM Assignment WHERE courseID = $1', [
-      String(courseID),
-    ]);
-    return rows.map((row) => ({
-      ...row,
+    const assignments = await prisma.assignment.findMany({
+      where: { courseId: String(courseID) },
+    });
+    return assignments.map((row) => ({
+      assignmentID: row.assignmentId,
+      name: row.name,
+      type: row.type,
       grade: row.grade,
+      points: row.points,
+      courseID: row.courseId,
     }));
   }
 
   async getAssignment(assignmentID: string): Promise<any | null> {
-    const { rows } = await db.query('SELECT * FROM Assignment WHERE assignmentID = $1', [
-      String(assignmentID),
-    ]);
-    const assignment = rows[0];
-    return assignment
-      ? { ...assignment, grade: assignment.grade }
-      : null;
+    const assignment = await prisma.assignment.findUnique({
+      where: { assignmentId: String(assignmentID) },
+    });
+    if (!assignment) return null;
+    return {
+      assignmentID: assignment.assignmentId,
+      name: assignment.name,
+      type: assignment.type,
+      grade: assignment.grade,
+      points: assignment.points,
+      courseID: assignment.courseId,
+    };
   }
 
   async pushSubmissions(courseID: string, userID: string, submissions: any[]): Promise<void> {
     try {
+      const key = userKey(userID);
       for (const s of submissions) {
         const id = s.id
           ? String(s.id)
-          : `${courseID}_${s.assignment_id || s.assignmentID}_${userKey(userID).toString('hex')}`;
-        const query = `
-          INSERT INTO Submission (submissionID, assignmentID, courseID, userID, score, grade, submitted_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (submissionID) DO UPDATE SET
-            score = EXCLUDED.score,
-            grade = EXCLUDED.grade,
-            submitted_at = EXCLUDED.submitted_at`;
-        await db.query(query, [
-          id,
-          String(s.assignment_id || s.assignmentID || ''),
-          String(courseID),
-          userKey(userID),
-          encryptedNullable(s.score !== null && s.score !== undefined ? Number(s.score) : null),
-          encryptedNullable(s.grade ? String(s.grade) : null),
-          encryptedNullable(s.submitted_at ? String(s.submitted_at) : null),
-        ]);
+          : `${courseID}_${s.assignment_id || s.assignmentID}_${Buffer.from(key).toString('hex')}`;
+        await prisma.submission.upsert({
+          where: { submissionId: id },
+          update: {
+            score: encryptedNullable(s.score !== null && s.score !== undefined ? Number(s.score) : null),
+            grade: encryptedNullable(s.grade ? String(s.grade) : null),
+            submittedAt: encryptedNullable(s.submitted_at ? String(s.submitted_at) : null),
+          },
+          create: {
+            submissionId: id,
+            assignmentId: String(s.assignment_id || s.assignmentID || ''),
+            courseId: String(courseID),
+            userId: key,
+            score: encryptedNullable(s.score !== null && s.score !== undefined ? Number(s.score) : null),
+            grade: encryptedNullable(s.grade ? String(s.grade) : null),
+            submittedAt: encryptedNullable(s.submitted_at ? String(s.submitted_at) : null),
+          },
+        });
       }
     } catch (error) {
       console.error('Error pushing submissions:', error);
@@ -359,34 +398,42 @@ export class DatabaseService {
   }
 
   async getSubmissions(courseID: string, userID?: string): Promise<any[]> {
-    let query = 'SELECT * FROM Submission WHERE courseID = $1';
-    const values: any[] = [String(courseID)];
-    if (userID) {
-      query += ' AND userID = $2';
-      values.push(userKey(userID));
-    }
-    const { rows } = await db.query(query, values);
-    return rows.map((row) => ({
-      ...row,
+    const submissions = await prisma.submission.findMany({
+      where: {
+        courseId: String(courseID),
+        ...(userID ? { userId: userKey(userID) } : {}),
+      },
+    });
+    return submissions.map((row) => ({
+      submissionID: row.submissionId,
+      assignmentID: row.assignmentId,
+      courseID: row.courseId,
+      userID: row.userId,
       score: decryptedNullable(row.score),
       grade: decryptedNullable(row.grade),
-      submitted_at: decryptedNullable(row.submitted_at),
+      submitted_at: decryptedNullable(row.submittedAt),
     }));
   }
 
   async pushGradeInformation(gradeInfoJSON: GradeInfo): Promise<void> {
     try {
-      const query = `
-        INSERT INTO User_Courses (userID, courseID, grade)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (userID, courseID)
-        DO UPDATE SET grade = EXCLUDED.grade`;
-      const values = [
-        userKey(gradeInfoJSON.userID),
-        gradeInfoJSON.courseID,
-        gradeInfoJSON.grade,
-      ];
-      await db.query(query, values);
+      const key = userKey(gradeInfoJSON.userID);
+      await prisma.userCourse.upsert({
+        where: {
+          userId_courseId: {
+            userId: key,
+            courseId: gradeInfoJSON.courseID,
+          },
+        },
+        update: {
+          grade: gradeInfoJSON.grade,
+        },
+        create: {
+          userId: key,
+          courseId: gradeInfoJSON.courseID,
+          grade: gradeInfoJSON.grade,
+        },
+      });
       await this.syncUpdate(gradeInfoJSON.userID);
     } catch (error) {
       console.error('Error pushing grade data:', error);
@@ -394,42 +441,45 @@ export class DatabaseService {
   }
 
   async getUserInfo(userID: string): Promise<UserInfo> {
-    const { rows } = await db.query<UserInfoRow>(
-      'SELECT first_name, last_name FROM User_Info WHERE userID = $1',
-      [userKey(userID)]
-    );
-    const user = rows[0];
+    const key = userKey(userID);
+    const user = await prisma.userInfo.findUnique({
+      where: { userId: key },
+    });
     if (!user) {
       throw new Error(`User with ID ${userID} not found in database`);
     }
 
     const retUserInfo: UserInfo = {
       userID,
-      firstName: decryptValue(user.first_name),
-      lastName: user.last_name ? decryptValue(user.last_name) : '',
+      firstName: decryptValue(user.firstName),
+      lastName: user.lastName ? decryptValue(user.lastName) : '',
     };
     return retUserInfo;
   }
 
   async getUserIDByApiKey(apiKey: string): Promise<string | null> {
-    const { rows } = await db.query<{ encrypted_user_id: string | null; encrypted_api_key: string }>(
-      'SELECT encrypted_user_id, encrypted_api_key FROM User_Api_Keys'
-    );
+    const rows = await prisma.userApiKey.findMany({
+      select: {
+        encryptedUserId: true,
+        encryptedApiKey: true,
+      },
+    });
     const matchingRow = rows.find(
-      (row) => row.encrypted_user_id && decryptValue(row.encrypted_api_key) === apiKey
+      (row) => row.encryptedUserId && decryptValue(row.encryptedApiKey) === apiKey
     );
-    if (!matchingRow || !matchingRow.encrypted_user_id) {
+    if (!matchingRow || !matchingRow.encryptedUserId) {
       return null;
     }
-    return decryptValue(matchingRow.encrypted_user_id);
+    return decryptValue(matchingRow.encryptedUserId);
   }
 
   async getStoredApiKey(userID: string): Promise<string> {
-    const { rows } = await db.query<UserApiKeyRow>(
-      'SELECT encrypted_api_key FROM User_Api_Keys WHERE userID = $1',
-      [userKey(userID)]
-    );
-    const apiKey = rows[0]?.encrypted_api_key;
+    const key = userKey(userID);
+    const row = await prisma.userApiKey.findUnique({
+      where: { userId: key },
+      select: { encryptedApiKey: true },
+    });
+    const apiKey = row?.encryptedApiKey;
     if (!apiKey) {
       throw new Error(`API key for user ${userID} not found in database`);
     }
@@ -437,78 +487,84 @@ export class DatabaseService {
   }
 
   async getCourseInformation(courseID: string): Promise<any[]> {
-    const { rows } = await db.query('SELECT * FROM Course WHERE courseID = $1', [
-      courseID,
-    ]);
-    return rows;
+    const rows = await prisma.course.findMany({
+      where: { courseId: courseID },
+    });
+    return rows.map((r) => ({
+      courseID: r.courseId,
+      course_name: r.courseName,
+      course_term: r.courseTerm,
+      course_term_id: r.courseTermId,
+      course_code: r.courseCode,
+      course_section: r.courseSection,
+      courseDepartment: r.courseDepartment,
+    }));
   }
 
   async getGradeInformation(courseID: string): Promise<any[]> {
-    const { rows } = await db.query(
-      'SELECT * FROM User_Courses WHERE courseID = $1',
-      [courseID]
-    );
+    const rows = await prisma.userCourse.findMany({
+      where: { courseId: courseID },
+    });
     return rows.map((row) => ({
-      ...row,
+      userID: row.userId,
+      courseID: row.courseId,
       grade: row.grade,
     }));
   }
 
   async getUserGradeInformation(userID: string): Promise<GradeInfo[]> {
-    const { rows } = await db.query<{
-      userid: string;
-      courseid: string;
-      grade: string | null;
-    }>(
-      `SELECT userID as userid, courseID as courseid, grade
-       FROM User_Courses
-       WHERE userID = $1`,
-      [userKey(userID)]
-    );
+    const key = userKey(userID);
+    const rows = await prisma.userCourse.findMany({
+      where: { userId: key },
+    });
     return rows.map((row) => ({
       userID: userID,
-      courseID: row.courseid,
+      courseID: row.courseId,
       grade: row.grade ?? '',
     }));
   }
 
   async syncUpdate(userID: string): Promise<void> {
     try {
-      const query = `
-        INSERT INTO Updates (userID, updated_at)
-        VALUES ($1, $2)`;
-      const values = [userKey(userID), new Date()];
-      await db.query(query, values);
+      const key = userKey(userID);
+      await prisma.update.create({
+        data: {
+          userId: key,
+          updatedAt: new Date(),
+        },
+      });
     } catch (error) {
       console.error(`Error Syncing Database: ${error}`);
     }
   }
 
   async lastUpdated(userID: string): Promise<Date | null> {
-    const { rows } = await db.query<UpdateRow>(
-      `SELECT updated_at
-       FROM Updates
-       WHERE userID = $1
-       ORDER BY updated_at DESC
-       LIMIT 1`,
-      [userKey(userID)]
-    );
-    const row = rows[0];
-    if (!row || !row.updated_at) {
+    const key = userKey(userID);
+    const row = await prisma.update.findFirst({
+      where: { userId: key },
+      orderBy: { updatedAt: 'desc' },
+      select: { updatedAt: true },
+    });
+    if (!row || !row.updatedAt) {
       return null;
     }
-    return new Date(row.updated_at);
+    return new Date(row.updatedAt);
   }
 
   async insertSessionKey(sessionKey: string, apiKey: string): Promise<void> {
     try {
-      const query = `
-        INSERT INTO Sessions (session_key, api_key)
-        VALUES ($1, $2)
-        ON CONFLICT (session_key) DO UPDATE SET
-          api_key = EXCLUDED.api_key,
-          created_at = CURRENT_TIMESTAMP`;
-      await db.query(query, [sessionKey, apiKey]);
+      await prisma.session.upsert({
+        where: { sessionKey },
+        update: {
+          apiKey,
+          createdAt: new Date(),
+        },
+        create: {
+          sessionKey,
+          apiKey,
+          createdAt: new Date(),
+        },
+      });
     } catch (error) {
       console.error('Error inserting session key:', error);
       throw error;
@@ -517,14 +573,14 @@ export class DatabaseService {
 
   async getSessionApiKey(sessionKey: string): Promise<string | null> {
     try {
-      const { rows } = await db.query(
-        'SELECT api_key FROM Sessions WHERE session_key = $1',
-        [sessionKey]
-      );
-      if (rows.length === 0 || !rows[0].api_key) {
+      const session = await prisma.session.findUnique({
+        where: { sessionKey },
+        select: { apiKey: true },
+      });
+      if (!session || !session.apiKey) {
         return null;
       }
-      return rows[0].api_key;
+      return session.apiKey;
     } catch (error) {
       console.error('Error retrieving session key:', error);
       return null;
@@ -538,7 +594,9 @@ export class DatabaseService {
 
   async deleteSessionKey(sessionKey: string): Promise<void> {
     try {
-      await db.query('DELETE FROM Sessions WHERE session_key = $1', [sessionKey]);
+      await prisma.session.deleteMany({
+        where: { sessionKey },
+      });
     } catch (error) {
       console.error('Error deleting session key:', error);
     }

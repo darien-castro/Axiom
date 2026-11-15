@@ -17,8 +17,15 @@ docs/
 │   ├── database.md            # PostgreSQL schema & DatabaseService
 │   ├── data-mapper.md         # Canvas payload normalization
 │   └── routes-api.md          # Express REST API endpoints
-└── frontend/                  # Next.js 16 App Router & UI Client
-    └── README.md              # High-level frontend overview, views & physics engine
+├── frontend/                  # Next.js 16 App Router & UI Client
+│   └── README.md              # High-level frontend overview, views & physics engine
+└── diagrams/                  # PlantUML system and database architecture diagrams
+    ├── README.md              # Diagram descriptions and rendering instructions
+    ├── database-erd.puml      # PostgreSQL ERD & Prisma models
+    ├── system-architecture.puml # 3-tier platform architecture
+    ├── data-sync-sequence.puml # 20-min cache & sync lifecycle sequence
+    ├── crypto-security.puml   # Zero-knowledge security & encryption flow
+    └── backend-class-diagram.puml # Backend OOP services and relationships
 ```
 
 ---
@@ -41,3 +48,12 @@ Explore the Next.js 16 (App Router) + React 19 web application, UI design system
 - **Dashboard (`/site/dashboard`)**: High-priority assignment impact cards, standing risk analysis, upcoming queue, and GPA projection layout.
 - **Mocksite Sandbox (`/mocksite`)**: 2D physics simulation canvas, draggable weighted nodes, and interactive workload analytics.
 - **Theme Engine**: Dynamic theme switching (Nord, Forest, Ocean, Twilight, Rose Pine, MacOS).
+
+### 3. [Architecture & Design Diagrams (PlantUML)](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/README.md)
+Visual PlantUML specifications for system components, database ERD, data sync lifecycles, and security models:
+
+- **[Database ERD](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/database-erd.puml)**: All 9 PostgreSQL tables with Prisma models, constraints, and relationships.
+- **[System Architecture](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/system-architecture.puml)**: Decoupled client/server, native C++ addon, and database tiers.
+- **[Data Sync Sequence](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/data-sync-sequence.puml)**: Authentication, 20-minute cache evaluation, and Canvas ingestion.
+- **[Cryptographic Security](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/crypto-security.puml)**: Deterministic HMAC lookups and AES-256-GCM encryption.
+- **[Backend Class Diagram](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/backend-class-diagram.puml)**: OOP service design and component interactions.

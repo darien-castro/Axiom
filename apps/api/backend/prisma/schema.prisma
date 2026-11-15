@@ -1,0 +1,141 @@
+// Prisma Schema for Axiom PostgreSQL Database
+// Location: apps/api/backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Users table: stores student identifier hashed with HMAC-SHA256
+model User {
+  /// Deterministic HMAC-SHA256 hash of the Canvas user ID
+  userId      Bytes        @id @map("userid")
+  firstName   String?      @map("first_name") @db.VarChar(255)
+  lastName    String?      @map("last_name") @db.VarChar(255)
+  
+  // Relations
+  apiKey      UserApiKey?
+  info        UserInfo?
+  userCourses UserCourse[]
+  submissions Submission[]
+  updates     Update[]
+
+  @@map("users")
+}
+
+/// User_Api_Keys table: stores AES-256-GCM encrypted Canvas bearer tokens and user IDs
+model UserApiKey {
+  userId          Bytes     @id @map("userid")
+  encryptedUserId String?   @map("encrypted_user_id")
+  encryptedApiKey String    @map("encrypted_api_key")
+  updatedAt       DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("user_api_keys")
+}
+
+/// User_Info table: stores first and last names (AES-256-GCM encrypted)
+model UserInfo {
+  userId    Bytes     @id @map("userid")
+  firstName String    @map("first_name")
+  lastName  String?   @map("last_name")
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("user_info")
+}
+
+/// Course table: stores course metadata retrieved from Canvas
+model Course {
+  courseId         String       @id @map("courseid") @db.VarChar(255)
+  courseName       String       @map("course_name") @db.VarChar(255)
+  courseTerm       String?      @map("course_term") @db.VarChar(255)
+  courseTermId     String?      @map("course_term_id") @db.VarChar(50)
+  courseCode       String?      @map("course_code") @db.VarChar(50)
+  courseSection    String?      @map("course_section") @db.VarChar(50)
+  courseDepartment String?      @map("coursedepartment") @db.VarChar(255)
+
+  // Relations
+  userCourses      UserCourse[]
+  assignments      Assignment[]
+  submissions      Submission[]
+
+  @@map("course")
+}
+
+/// User_Courses table: junction table linking users to enrolled courses
+model UserCourse {
+  userId   Bytes   @map("userid")
+  courseId String  @map("courseid") @db.VarChar(255)
+  grade    String? @map("grade")
+
+  // Relations
+  user     User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  course   Course  @relation(fields: [courseId], references: [courseId], onDelete: Cascade)
+
+  @@id([userId, courseId])
+  @@map("user_courses")
+}
+
+/// Assignment table: stores assignment details and syllabus weights
+model Assignment {
+  assignmentId String       @id @map("assignmentid") @db.VarChar(255)
+  name         String       @map("name") @db.VarChar(255)
+  type         String?      @map("type") @db.VarChar(255)
+  grade        String?      @map("grade")
+  points       Float?       @map("points")
+  courseId     String?      @map("courseid") @db.VarChar(255)
+
+  // Relations
+  course       Course?      @relation(fields: [courseId], references: [courseId], onDelete: SetNull)
+  submissions  Submission[]
+
+  @@map("assignment")
+}
+
+/// Submission table: stores student assignment submissions and scores
+model Submission {
+  submissionId String      @id @map("submissionid") @db.VarChar(255)
+  assignmentId String?     @map("assignmentid") @db.VarChar(255)
+  courseId     String?     @map("courseid") @db.VarChar(255)
+  userId       Bytes?      @map("userid")
+  score        String?     @map("score")
+  grade        String?     @map("grade")
+  submittedAt  String?     @map("submitted_at")
+
+  // Relations
+  user         User?       @relation(fields: [userId], references: [userId], onDelete: SetNull)
+  course       Course?     @relation(fields: [courseId], references: [courseId], onDelete: SetNull)
+  assignment   Assignment? @relation(fields: [assignmentId], references: [assignmentId], onDelete: SetNull)
+
+  @@map("submission")
+}
+
+/// Updates table: logs last sync timestamps per user for rate limiting / cache invalidation
+model Update {
+  updateId  Int       @id @default(autoincrement()) @map("updateid")
+  userId    Bytes?    @map("userid")
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  user      User?     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("updates")
+}
+
+/// Sessions table: stores temporary authentication session keys
+model Session {
+  sessionKey String    @id @map("session_key") @db.VarChar(255)
+  apiKey     String    @map("api_key")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("sessions")
+}
