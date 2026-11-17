@@ -1,0 +1,103 @@
+@startuml Axiom_Database_ERD
+!theme plain
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+    BackgroundColor #F8FAFC
+    BorderColor #64748B
+    HeaderBackgroundColor #E2E8F0
+}
+
+title Axiom PostgreSQL Relational Schema & Prisma Models
+
+entity "User (users)" as User {
+    * **userId**: BYTEA [PK] <<HMAC-SHA256>>
+    --
+    firstName: VARCHAR(255)
+    lastName: VARCHAR(255)
+}
+
+entity "UserApiKey (user_api_keys)" as UserApiKey {
+    * **userId**: BYTEA [PK, FK]
+    --
+    encryptedUserId: TEXT <<AES-256-GCM>>
+    * encryptedApiKey: TEXT <<AES-256-GCM>>
+    updatedAt: TIMESTAMP
+}
+
+entity "UserInfo (user_info)" as UserInfo {
+    * **userId**: BYTEA [PK, FK]
+    --
+    * firstName: TEXT <<AES-256-GCM>>
+    lastName: TEXT <<AES-256-GCM>>
+    updatedAt: TIMESTAMP
+}
+
+entity "Course (course)" as Course {
+    * **courseId**: VARCHAR(255) [PK]
+    --
+    * courseName: VARCHAR(255)
+    courseTerm: VARCHAR(255)
+    courseTermId: VARCHAR(50)
+    courseCode: VARCHAR(50)
+    courseSection: VARCHAR(50)
+    courseDepartment: VARCHAR(255)
+}
+
+entity "UserCourse (user_courses)" as UserCourse {
+    * **userId**: BYTEA [PK, FK]
+    * **courseId**: VARCHAR(255) [PK, FK]
+    --
+    grade: TEXT <<Encrypted>>
+}
+
+entity "Assignment (assignment)" as Assignment {
+    * **assignmentId**: VARCHAR(255) [PK]
+    --
+    * name: VARCHAR(255)
+    type: VARCHAR(255)
+    grade: TEXT
+    points: FLOAT
+    courseId: VARCHAR(255) [FK]
+}
+
+entity "Submission (submission)" as Submission {
+    * **submissionId**: VARCHAR(255) [PK]
+    --
+    assignmentId: VARCHAR(255) [FK]
+    courseId: VARCHAR(255) [FK]
+    userId: BYTEA [FK]
+    score: TEXT <<AES-256-GCM>>
+    grade: TEXT <<AES-256-GCM>>
+    submittedAt: TEXT <<AES-256-GCM>>
+}
+
+entity "Update (updates)" as Update {
+    * **updateId**: SERIAL [PK]
+    --
+    userId: BYTEA [FK]
+    updatedAt: TIMESTAMP
+}
+
+entity "Session (sessions)" as Session {
+    * **sessionKey**: VARCHAR(255) [PK]
+    --
+    * apiKey: TEXT
+    createdAt: TIMESTAMP
+}
+
+' Relationships & Cardinalities
+User ||--o| UserApiKey : "1 : 0..1 (Cascade Delete)"
+User ||--o| UserInfo : "1 : 0..1 (Cascade Delete)"
+User ||--o{ UserCourse : "1 : 0..* (Cascade Delete)"
+User ||--o{ Submission : "1 : 0..*"
+User ||--o{ Update : "1 : 0..* (Cascade Delete)"
+
+Course ||--o{ UserCourse : "1 : 0..* (Cascade Delete)"
+Course ||--o{ Assignment : "1 : 0..* (Set Null)"
+Course ||--o{ Submission : "1 : 0..*"
+
+Assignment ||--o{ Submission : "1 : 0..*"
+
+@enduml

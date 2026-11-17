@@ -1,0 +1,75 @@
+@startuml Axiom_Sequence_Diagram
+!theme plain
+autonumber
+skinparam roundcorner 6
+skinparam shadowing false
+skinparam responseMessageBelowArrow true
+
+title Canvas Sync & 20-Minute Cache Invalidation Flow
+
+actor Student as User
+participant "Next.js Frontend\n(/site/dashboard)" as Web
+participant "Express REST API\n(POST /api/dashboard)" as API
+participant "RouteService\n(ensureUser & Cache)" as RS
+participant "DatabaseService\n(Prisma Layer)" as DB
+database "PostgreSQL\n(axiom)" as PG
+participant "Crypto Service\n(AES-GCM / HMAC)" as Crypto
+participant "CanvasClient\n(or MockClient)" as Canvas
+
+User -> Web: Open Dashboard
+Web -> API: POST /api/dashboard { apiKey }
+API -> RS: userRequestedDashboard(apiKey)
+
+== 1. Cache Check & User Lookup ==
+RS -> DB: getUserIDByApiKey(apiKey)
+DB -> PG: SELECT encrypted_user_id, encrypted_api_key FROM user_api_keys
+PG --> DB: Rows
+DB -> Crypto: decryptValue(encrypted_api_key)
+Crypto --> DB: Raw API key
+DB --> RS: Matching userID
+
+RS -> DB: lastUpdated(userID)
+DB -> PG: SELECT updated_at FROM updates ORDER BY updated_at DESC LIMIT 1
+PG --> DB: lastUpdate timestamp
+DB --> RS: lastUpdate
+
+alt Data is Fresh (< 20 minutes old)
+    RS -> DB: getUserCourses(userID)
+    DB -> PG: SELECT * FROM user_courses JOIN course
+    PG --> DB: Cached courses
+    DB --> RS: Courses
+    RS -> DB: getUserGradeInformation(userID)
+    DB --> RS: Grades
+    RS --> API: Aggregated Dashboard Data (From Cache)
+else Data is Stale or First-Time (> 20 minutes old)
+    == 2. Live Canvas Fetch & Normalization ==
+    RS -> Canvas: GetUserInformation()
+    Canvas --> RS: Raw Profile JSON
+    RS -> Canvas: GetCourses()
+    Canvas --> RS: Raw Courses JSON
+    
+    RS -> RS: mapper.cleanUserInformation(me)
+    RS -> RS: mapper.cleanCourses(courses)
+
+    == 3. Encrypted Database Persistence via Prisma ==
+    RS -> DB: pushGeneralUserInfo(userInfo, apiKey)
+    DB -> Crypto: hmacLookup(userID) -> deterministic hash
+    DB -> Crypto: encryptValue(firstName), encryptValue(apiKey)
+    DB -> PG: prisma.user.upsert & prisma.userApiKey.upsert & prisma.userInfo.upsert
+    
+    RS -> DB: pushCourseInformation(cleanCourses)
+    DB -> PG: prisma.course.upsert
+    
+    RS -> DB: pushUserCourses(userID, courseIDs)
+    DB -> PG: prisma.userCourse.upsert
+    
+    RS -> DB: syncUpdate(userID)
+    DB -> PG: prisma.update.create (current timestamp)
+    
+    RS --> API: Fresh Aggregated Dashboard Data
+end
+
+API --> Web: HTTP 200 { userInfo, courses, assignments, grades }
+Web --> User: Render Dashboard Cards & Metrics
+
+@enduml
