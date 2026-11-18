@@ -10,12 +10,19 @@ Thumbs.db
 
 # Environment variables & secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.env
+*.pem
+*.key
 backend/src/api-key.js
 api-key.js
 apps/api/backend/src/api-key.ts
+
+# Local Database Files
+*.sqlite
+*.sqlite3
+*.db
 
 # Dependencies
 node_modules/

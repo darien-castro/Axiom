@@ -5,14 +5,23 @@
   "main": "src/server.ts",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
+<<<<<<< HEAD
     "postinstall": "prisma generate"
+=======
+    "prisma:seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+>>>>>>> feat-frontend-settings
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -33,6 +42,7 @@
     "node-gyp": "^13.0.2",
     "prisma": "^6.19.3",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^3.0.7"
   }
 }

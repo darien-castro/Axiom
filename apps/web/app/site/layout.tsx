@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Separator } from "@/components/ui/separator";
+import { applyTheme, getSavedTheme, getSavedDarkMode } from "@/lib/themes";
 
 const navItems = [
   {
@@ -57,6 +59,12 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
+  useEffect(() => {
+    const savedTheme = getSavedTheme();
+    const savedDark = getSavedDarkMode();
+    applyTheme(savedTheme, savedDark);
+  }, []);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">

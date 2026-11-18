@@ -1,0 +1,88 @@
+@startuml Axiom_Class_Diagram
+!theme plain
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+interface CanvasClientInterface {
+    + verifyKey(apiKey: string): Promise<boolean>
+    + GetUserInformation(): Promise<any>
+    + GetCourses(): Promise<any[]>
+    + GetAssignments(courseID: string): Promise<any[]>
+    + GetSubmissions(courseID: string): Promise<any[]>
+}
+
+class CanvasClient implements CanvasClientInterface {
+    - baseUrl: string
+    + m_apiKey: string
+    + constructor(baseUrl: string)
+    + verifyKey(apiKey: string): Promise<boolean>
+    + GetUserInformation(): Promise<any>
+    + GetCourses(): Promise<any[]>
+    + GetAssignments(courseID: string): Promise<any[]>
+    + GetSubmissions(courseID: string): Promise<any[]>
+}
+
+class MockCanvasClient implements CanvasClientInterface {
+    + verifyKey(apiKey: string): Promise<boolean>
+    + GetUserInformation(): Promise<any>
+    + GetCourses(): Promise<any[]>
+    + GetAssignments(courseID: string): Promise<any[]>
+    + GetSubmissions(courseID: string): Promise<any[]>
+}
+
+class DataMapper {
+    + cleanUserInformation(rawUser: any): CleanUser
+    + cleanCourses(rawCourses: any[]): CleanCourse[]
+    + cleanCourseAssignments(rawAssignments: any[]): CleanAssignment[]
+    + cleanSubmissions(rawSubmissions: any[]): CleanSubmission[]
+}
+
+class CryptoService {
+    - encryptionKey: Buffer
+    - lookupHmacKey: Buffer
+    + hmacLookup(value: string): Buffer
+    + encryptValue(plaintext: string): string
+    + decryptValue(cipherBlob: string): string
+}
+
+class DatabaseService {
+    - prisma: PrismaClient
+    + initAllTables(): Promise<void>
+    + pushGeneralUserInfo(info: UserInfo, apiKey?: string): Promise<void>
+    + pushUserApiKey(userId: string, apiKey: string): Promise<void>
+    + pushUserInfo(info: UserInfo): Promise<void>
+    + pushCourseInformation(courses: CourseInfo[]): Promise<void>
+    + pushUserCourses(userId: string, courseIds: string[]): Promise<void>
+    + getUserCourses(userId: string): Promise<any[]>
+    + pushAssignments(courseId: string, assignments: any[]): Promise<void>
+    + getAssignments(courseId: string): Promise<any[]>
+    + pushSubmissions(courseId: string, userId: string, subs: any[]): Promise<void>
+    + getSubmissions(courseId: string, userId?: string): Promise<any[]>
+    + getUserInfo(userId: string): Promise<UserInfo>
+    + getUserIDByApiKey(apiKey: string): Promise<string | null>
+    + syncUpdate(userId: string): Promise<void>
+    + lastUpdated(userId: string): Promise<Date | null>
+    + insertSessionKey(key: string, apiKey: string): Promise<void>
+    + isSessionValid(key: string): Promise<boolean>
+}
+
+class RouteService {
+    - client: CanvasClient
+    - mapper: DataMapper
+    - db: DatabaseService
+    + ensureUser(apiKey: string): Promise<boolean>
+    + userRequestedCoursesRoute(apiKey: string): Promise<any>
+    + userRequestedCourseRoute(apiKey: string, courseId: string): Promise<any>
+    + userRequestedAssignmentsRoute(apiKey: string, courseId: string): Promise<any>
+    + userRequestedSubmissionsRoute(apiKey: string, courseId: string): Promise<any>
+    + userRequestedDashboard(apiKey: string): Promise<any>
+    - isGreaterThan20MinsApart(now: Date, last: Date | null): boolean
+}
+
+RouteService --> CanvasClientInterface : "Fetches LMS data"
+RouteService --> DataMapper : "Sanitizes data"
+RouteService --> DatabaseService : "Persists & queries"
+DatabaseService --> CryptoService : "Encrypts/Decrypts values"
+
+@enduml
