@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -26,15 +26,39 @@ export default function Home() {
   const [status, setStatus] = useState<VerificationStatus>('idle');
   const router = useRouter();
 
-  const checkForCookie = async () => {
-    const cookieName = 'AxiomCookie';
-    const exists = document.cookie.split('; ').some((row) => row.startsWith(`${cookieName}=`));
-    if (exists) {
-      // try catch block for verfication to see if cookie is valid
-      // if valid push to site
-      router.push('/site/dashboard');
-    }
+  function getClientCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null;
+
+    const match = document.cookie
+      .split(';')
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(`${encodeURIComponent(name)}=`));
+
+    if (!match) return null;
+
+    const value = match.split('=')[1];
+    return value ? decodeURIComponent(value) : null;
   }
+
+  /**
+   * Handles authenticated redirection with value validation.
+   */
+  const checkSessionAndRedirect = async () => {
+    const token = getClientCookie('AxiomCookie');
+
+    if (!token) return;
+
+    try {
+      // Optional: Validate session validity before redirecting
+      // await authApi.validateToken(token);
+      router.replace('/site/dashboard'); // replace() prevents landing in a back-button loop
+    } catch (error) {
+      console.error('Invalid or expired session cookie:', error);
+    }
+  };
+  useEffect(() => {
+    checkSessionAndRedirect();
+  }, []);
 
   const wait = (ms: number): Promise<void> => {
     return new Promise((resolve) => setTimeout(resolve, ms));
