@@ -13,15 +13,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
-<<<<<<< HEAD
-    "postinstall": "prisma generate"
-=======
     "prisma:seed": "tsx prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
->>>>>>> feat-frontend-settings
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

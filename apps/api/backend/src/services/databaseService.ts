@@ -469,15 +469,6 @@ export class DatabaseService {
         encryptedApiKey: true,
       },
     });
-<<<<<<< HEAD
-    const matchingRow = rows.find(
-      (row) => row.encryptedUserId && decryptValue(row.encryptedApiKey) === apiKey
-    );
-    if (!matchingRow || !matchingRow.encryptedUserId) {
-      return null;
-    }
-    return decryptValue(matchingRow.encryptedUserId);
-=======
     const matchingRow = rows.find((row) => {
       if (!row.encryptedUserId || !row.encryptedApiKey) return false;
       try {
@@ -494,7 +485,6 @@ export class DatabaseService {
     } catch {
       return null;
     }
->>>>>>> feat-frontend-settings
   }
 
   async getStoredApiKey(userID: string): Promise<string> {

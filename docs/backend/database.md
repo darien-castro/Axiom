@@ -1,55 +1,21 @@
 # Database Setup & Documentation
 
-<<<<<<< HEAD
-The database layer (`src/services/databaseService.ts`, `src/services/db.ts`, and `prisma/schema.prisma`) manages PostgreSQL connections, Prisma ORM models, encrypted storage, and caching.
-=======
 The database layer (`apps/api/backend/src/services/databaseService.ts`, `apps/api/backend/src/services/db.ts`, and `apps/api/backend/prisma/schema.prisma`) manages PostgreSQL connections, Prisma ORM models, migrations, zero-knowledge encryption, and rate-limited caching.
->>>>>>> feat-frontend-settings
 
 ---
 
 ## 1. Local Database Setup Instructions
 
-<<<<<<< HEAD
 The application uses `PrismaClient` configured via environment variables or `DATABASE_URL`:
-- `DATABASE_URL`: Full PostgreSQL connection URL (optional, e.g. `postgresql://user:pass@127.0.0.1:5432/axiom?schema=public`)
+- `DATABASE_URL`: Full PostgreSQL connection URL (e.g. `postgresql://user:pass@127.0.0.1:5432/axiom?schema=public`)
 - `DB_HOST`: Hostname (default: `127.0.0.1`)
 - `DB_PORT`: PostgreSQL port (default: `5432`)
 - `DB_USER`: PostgreSQL user (default: `postgres`)
 - `DB_PASSWORD`: PostgreSQL password
 - `DB_NAME`: Database name (default: `axiom`)
+- `ENCRYPTION_KEY`: 32-byte Base64 key
+- `LOOKUP_HMAC_KEY`: HMAC secret key
 
----
-
-## Prisma Schema & Tables
-
-The Prisma schema is located at `apps/api/backend/prisma/schema.prisma`. It models the 9 relational tables:
-
-1. **`User` (`users`)**: Primary student table. Primary key `userID BYTEA` stores the deterministic HMAC-SHA256 hash of the Canvas user ID.
-2. **`UserApiKey` (`user_api_keys`)**: Stores AES-256-GCM encrypted Canvas bearer tokens and encrypted user IDs with cascade deletion on user removal.
-3. **`UserInfo` (`user_info`)**: Stores first and last names (encrypted) with update timestamps.
-4. **`Course` (`course`)**: Stores course metadata (course ID, name, term, term ID, course code, section, department).
-5. **`UserCourse` (`user_courses`)**: Many-to-many junction table recording course enrollments and encrypted course letter/numerical grades.
-6. **`Assignment` (`assignment`)**: Stores assignment IDs, titles, types, grade points possible, and foreign key references to `Course`.
-7. **`Submission` (`submission`)**: Stores submission timestamps, scores, and grading states.
-8. **`Update` (`updates`)**: Logs the timestamp of the last successful sync with Canvas for each user.
-9. **`Session` (`sessions`)**: Stores session keys and Canvas API tokens.
-
-### Prisma CLI Commands
-
-In `apps/api/backend`:
-
-```bash
-# Generate Prisma Client
-npm run prisma:generate
-
-# Push schema changes directly to the database
-npm run prisma:push
-
-# Run migrations in development
-npm run prisma:migrate
-```
-=======
 ### Prerequisites
 - PostgreSQL 14+ installed and running locally
 - Node.js 20.9+ and npm
@@ -85,6 +51,9 @@ npm run prisma:generate
 
 # Apply migrations to local database
 npm run prisma:migrate
+
+# Or push schema changes directly in development
+npm run prisma:push
 ```
 
 ---
@@ -99,17 +68,11 @@ The following verification protocol confirms multi-user database consistency acr
 | **2. Read** | **Member B** | Connects to shared/replicated DB and queries student courses via `getUserCourses` and profile via `getUserInfo` | **READ** | Student name decrypts cleanly from AES-256-GCM ciphertext; all enrolled classes returned. | Verified |
 | **3. Update** | **Member C** | Updates student course grade and sync timestamp via `pushGradeInformation` and `syncUpdate` | **UPDATE** | Updated letter grade and percentage reflected in `user_courses`; new timestamp in `updates`. | Verified |
 | **4. Delete** | **Member A** | Destroys active session via `deleteSessionKey` and runs test cleanup | **DELETE** | Session invalidated (`isSessionValid` returns `false`); test records removed cleanly. | Verified |
->>>>>>> feat-frontend-settings
 
 ---
 
 ## 3. Prisma Schema & Tables
 
-<<<<<<< HEAD
-To prevent Canvas API rate-limiting, `isGreaterThan20MinsApart(now, lastUpdate)` inspects the `Updates` table:
-- If less than 20 minutes have elapsed since the last sync, cached records from PostgreSQL are served immediately.
-- If more than 20 minutes have elapsed or no record exists, the server queries Canvas, updates the database via Prisma, and bumps the `Updates` timestamp.
-=======
 The Prisma schema is located at `apps/api/backend/prisma/schema.prisma`. It models 9 relational tables:
 
 1. **`User` (`users`)**: Primary student table. Primary key `userID BYTEA` stores the deterministic HMAC-SHA256 hash of the Canvas user ID.
@@ -122,9 +85,13 @@ The Prisma schema is located at `apps/api/backend/prisma/schema.prisma`. It mode
 8. **`Update` (`updates`)**: Logs the timestamp of the last successful sync with Canvas for each user.
 9. **`Session` (`sessions`)**: Stores session keys and Canvas API tokens.
 
-### Migration History
+### 20-Minute Rate-Limited Cache
+To prevent Canvas API rate-limiting, `isGreaterThan20MinsApart(now, lastUpdate)` inspects the `Updates` table:
+- If less than 20 minutes have elapsed since the last sync, cached records from PostgreSQL are served immediately.
+- If more than 20 minutes have elapsed or no record exists, the server queries Canvas, updates the database via Prisma, and bumps the `Updates` timestamp.
 
-Initial migration is tracked at [`apps/api/backend/prisma/migrations/0_init/migration.sql`](file:///home/pablovepo/main/githubProjs/Axiom-new/apps/api/backend/prisma/migrations/0_init/migration.sql).
+### Migration History
+Initial migration is tracked at [`apps/api/backend/prisma/migrations/0_init/migration.sql`](apps/api/backend/prisma/migrations/0_init/migration.sql).
 
 ---
 
@@ -136,4 +103,3 @@ The backend uses **Vitest** for automated user journey and error-handling testin
 cd apps/api/backend
 npm test
 ```
->>>>>>> feat-frontend-settings

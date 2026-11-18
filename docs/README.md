@@ -19,22 +19,11 @@ docs/
 │   └── routes-api.md          # Express REST API endpoints
 ├── frontend/                  # Next.js 16 App Router & UI Client
 │   └── README.md              # High-level frontend overview, views & physics engine
-<<<<<<< HEAD
-└── diagrams/                  # PlantUML system and database architecture diagrams
-    ├── README.md              # Diagram descriptions and rendering instructions
-    ├── database-erd.puml      # PostgreSQL ERD & Prisma models
-    ├── system-architecture.puml # 3-tier platform architecture
-    ├── data-sync-sequence.puml # 20-min cache & sync lifecycle sequence
-    ├── crypto-security.puml   # Zero-knowledge security & encryption flow
-    └── backend-class-diagram.puml # Backend OOP services and relationships
-=======
-├── uml/                       # PlantUML UML diagrams & rendered SVG/PNG assets
-│   ├── class-diagram.puml     # Class diagram (.puml & .svg)
-│   ├── sequence-diagram.puml  # Sequence diagram (.puml & .svg)
-│   └── database-erd.puml      # PostgreSQL ERD diagram (.puml, .svg & .png)
-├── database-setup.md          # Database setup instructions & team CRUD verification
+├── uml/                       # PlantUML UML diagrams & rendered PNG assets
+│   ├── class-diagram.puml     # Class diagram (.puml & .png)
+│   ├── sequence-diagram.puml  # Sequence diagram (.puml & .png)
+│   └── database-erd.puml      # PostgreSQL ERD diagram (.puml & .png)
 └── ai-design-review.md        # AI design decision review & corrections
->>>>>>> feat-frontend-settings
 ```
 
 ---
@@ -58,24 +47,13 @@ Explore the Next.js 16 (App Router) + React 19 web application, UI design system
 - **Mocksite Sandbox (`/mocksite`)**: 2D physics simulation canvas, draggable weighted nodes, and interactive workload analytics.
 - **Theme Engine**: Dynamic theme switching (Nord, Forest, Ocean, Twilight, Rose Pine, MacOS).
 
-<<<<<<< HEAD
-### 3. [Architecture & Design Diagrams (PlantUML)](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/README.md)
-Visual PlantUML specifications for system components, database ERD, data sync lifecycles, and security models:
-
-- **[Database ERD](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/database-erd.puml)**: All 9 PostgreSQL tables with Prisma models, constraints, and relationships.
-- **[System Architecture](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/system-architecture.puml)**: Decoupled client/server, native C++ addon, and database tiers.
-- **[Data Sync Sequence](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/data-sync-sequence.puml)**: Authentication, 20-minute cache evaluation, and Canvas ingestion.
-- **[Cryptographic Security](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/crypto-security.puml)**: Deterministic HMAC lookups and AES-256-GCM encryption.
-- **[Backend Class Diagram](file:///home/pablovepo/main/githubProjs/Axiom-new/docs/diagrams/backend-class-diagram.puml)**: OOP service design and component interactions.
-=======
 ### 3. [Architecture & UML Diagrams (PlantUML)](uml/)
 Visual PlantUML specifications for system components, database ERD, data sync lifecycles, and class structures:
 
-- **[Class Diagram](uml/class-diagram.puml)**: System OOP services, data models, and component relationships ([SVG](uml/class-diagram.svg)).
-- **[Sequence Diagram](uml/sequence-diagram.puml)**: User authentication, caching evaluation, and data sync sequence ([SVG](uml/sequence-diagram.svg)).
-- **[Database ERD](uml/database-erd.puml)**: PostgreSQL relational schema and Prisma models ([SVG](uml/database-erd.svg), [PNG](uml/dbpuml.png)).
+- **[Class Diagram](uml/class-diagram.puml)**: System OOP services, data models, and component relationships ([PNG](uml/class_diagram.png)).
+- **[Sequence Diagram](uml/sequence-diagram.puml)**: User authentication, caching evaluation, and data sync sequence ([PNG](uml/sequence_diagram.png)).
+- **[Database ERD](uml/database-erd.puml)**: PostgreSQL relational schema and Prisma models ([PNG](uml/dbpuml.png)).
 
 ### 4. Setup & Design Reviews
-- **[Database Setup Guide](database-setup.md)**: Local PostgreSQL setup, Prisma migrations, and team CRUD verification table.
+- **[Database Setup & Documentation](backend/database.md)**: Local PostgreSQL setup, Prisma migrations, and team CRUD verification table.
 - **[AI Design Review](ai-design-review.md)**: Evaluation and correction of AI-generated design decisions.
->>>>>>> feat-frontend-settings
