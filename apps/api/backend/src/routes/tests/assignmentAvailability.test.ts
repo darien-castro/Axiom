@@ -17,6 +17,8 @@ const workloadDb = vi.hoisted(() => ({
   dismissAssignment: vi.fn(),
   restoreAssignment: vi.fn(),
   getStudentTimeReports: vi.fn(),
+  getFocusedAssignments: vi.fn(),
+  saveAssignmentFocus: vi.fn(),
   removeAssignmentTimeReport: vi.fn(),
 }));
 vi.mock('../../services/databaseService', () => ({
@@ -55,6 +57,7 @@ beforeEach(() => {
   workloadDb.getHiddenCourses.mockResolvedValue([]);
   workloadDb.getDismissedAssignments.mockResolvedValue([]);
   workloadDb.getStudentTimeReports.mockResolvedValue([]);
+  workloadDb.getFocusedAssignments.mockResolvedValue([]);
   vi.stubGlobal('fetch', canvasFetch);
 });
 
@@ -300,4 +303,36 @@ test('scopes assignment dismissals and effort report removal to the signed-in st
   expect(remove.status).toBe(200);
   expect(await remove.json()).toEqual({ estimatedMinutes: 75, reportCount: 3 });
   expect(workloadDb.removeAssignmentTimeReport).toHaveBeenCalledWith('100', '42', '7');
+});
+
+test('loads, adds and removes focus entries for the signed-in student', async () => {
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/users/self`) return Response.json({ id: 100 });
+    if (url === `${canvasUrl}/courses/42/assignments/7`) return Response.json({ id: 7, name: 'Lab report' });
+    expect(String(url)).toContain('enrollment_state=active&enrollment_type=student');
+    return Response.json([{ id: 42, name: 'Database Design' }]);
+  });
+  const cookie = await signIn('student-a');
+  const setFocus = (courseId: string, focused: boolean) => localFetch(`${apiUrl}/workload/assignments/focus`, {
+    method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ courseId, assignmentId: '7', focused }),
+  });
+
+  expect((await setFocus('99', true)).status).toBe(404);
+  expect(workloadDb.saveAssignmentFocus).not.toHaveBeenCalled();
+  const add = await setFocus('42', true);
+  expect(add.status).toBe(200);
+  expect(await add.json()).toEqual({ focused: true });
+  expect(workloadDb.saveAssignmentFocus).toHaveBeenCalledWith('100', '42', '7', true);
+
+  const entry = { courseId: '42', assignmentId: '7' };
+  workloadDb.getFocusedAssignments.mockResolvedValueOnce([entry]);
+  const workspace = await localFetch(`${apiUrl}/workload/courses?includeAssignmentPreferences=true`, { headers: { Cookie: cookie } });
+  expect(await workspace.json()).toMatchObject({ focusedAssignments: [entry] });
+  expect(workloadDb.getFocusedAssignments).toHaveBeenCalledWith('100');
+
+  const remove = await setFocus('42', false);
+  expect(remove.status).toBe(200);
+  expect(await remove.json()).toEqual({ focused: false });
+  expect(workloadDb.saveAssignmentFocus).toHaveBeenCalledWith('100', '42', '7', false);
 });

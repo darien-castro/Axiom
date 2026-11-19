@@ -198,6 +198,13 @@ export class DatabaseService {
         PRIMARY KEY (student_key, course_id, assignment_id)
       )`;
     await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS focused_assignments (
+        student_key BYTEA NOT NULL,
+        course_id TEXT NOT NULL,
+        assignment_id TEXT NOT NULL,
+        PRIMARY KEY (student_key, course_id, assignment_id)
+      )`;
+    await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS assignment_time_reports (
         course_id TEXT NOT NULL,
         assignment_id TEXT NOT NULL,
@@ -266,6 +273,26 @@ export class DatabaseService {
     await prisma.$executeRaw`
       DELETE FROM dismissed_assignments
       WHERE student_key = ${userKey(userID)} AND course_id = ${courseId} AND assignment_id = ${assignmentId}`;
+  }
+
+  async getFocusedAssignments(userID: string) {
+    return prisma.$queryRaw<{ courseId: string; assignmentId: string }[]>`
+      SELECT course_id AS "courseId", assignment_id AS "assignmentId"
+      FROM focused_assignments WHERE student_key = ${userKey(userID)}`;
+  }
+
+  async saveAssignmentFocus(userID: string, courseId: string, assignmentId: string, focused: boolean) {
+    const studentKey = userKey(userID);
+    if (focused) {
+      await prisma.$executeRaw`
+        INSERT INTO focused_assignments (student_key, course_id, assignment_id)
+        VALUES (${studentKey}, ${courseId}, ${assignmentId})
+        ON CONFLICT (student_key, course_id, assignment_id) DO NOTHING`;
+    } else {
+      await prisma.$executeRaw`
+        DELETE FROM focused_assignments
+        WHERE student_key = ${studentKey} AND course_id = ${courseId} AND assignment_id = ${assignmentId}`;
+    }
   }
 
   async saveAssignmentTimeReport(userID: string, courseID: string, assignmentID: string, minutes: number) {

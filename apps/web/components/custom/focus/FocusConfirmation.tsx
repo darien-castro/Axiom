@@ -3,10 +3,9 @@
 import { useRef, type RefObject } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
-import type { FocusAssignment } from "@/lib/focus-types";
 
 export default function FocusConfirmation({ assignment, returnFocus, onCancel, onConfirm }: {
-  assignment: FocusAssignment | null;
+  assignment: { title: string } | null;
   returnFocus: RefObject<HTMLElement | null>;
   onCancel: () => void;
   onConfirm: () => void;
@@ -16,9 +15,9 @@ export default function FocusConfirmation({ assignment, returnFocus, onCancel, o
   return (
     <Dialog.Root open={assignment !== null} onOpenChange={(open) => { if (!open) onCancel(); }}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-foreground/20" />
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-foreground/20 data-closed:hidden" />
         <Dialog.Popup initialFocus={cancelButton} finalFocus={returnFocus}
-          className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
+          className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl data-closed:hidden">
           <Dialog.Title className="text-lg font-semibold tracking-tight">Add this assignment to My Focus List?</Dialog.Title>
           <Dialog.Description className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {assignment?.title}

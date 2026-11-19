@@ -39,6 +39,15 @@ model DismissedAssignment {
   @@map("dismissed_assignments")
 }
 
+model FocusedAssignment {
+  studentKey   Bytes  @map("student_key")
+  courseId     String @map("course_id")
+  assignmentId String @map("assignment_id")
+
+  @@id([studentKey, courseId, assignmentId])
+  @@map("focused_assignments")
+}
+
 model AssignmentTimeReport {
   courseId     String @map("course_id")
   assignmentId String @map("assignment_id")

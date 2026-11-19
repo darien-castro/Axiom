@@ -149,10 +149,20 @@ test('keeps course preferences private and computes the median from one time rep
     expect(await db.getDismissedAssignments(studentA)).toEqual([dismissed]);
     await db.restoreAssignment(studentA, courseId, 'lab');
     expect(await db.getDismissedAssignments(studentA)).toEqual([]);
+
+    await db.saveAssignmentFocus(studentA, courseId, 'lab', true);
+    await db.saveAssignmentFocus(studentA, courseId, 'lab', true);
+    expect(await db.getFocusedAssignments(studentA)).toEqual([{ courseId, assignmentId: 'lab' }]);
+    expect(await db.getFocusedAssignments(studentB)).toEqual([]);
+    await db.saveAssignmentFocus(studentB, courseId, 'lab', false);
+    expect(await db.getFocusedAssignments(studentA)).toEqual([{ courseId, assignmentId: 'lab' }]);
+    await db.saveAssignmentFocus(studentA, courseId, 'lab', false);
+    expect(await db.getFocusedAssignments(studentA)).toEqual([]);
   } finally {
     await prisma.$executeRaw`DELETE FROM assignment_time_reports WHERE course_id = ${courseId}`;
     await prisma.$executeRaw`DELETE FROM course_credit_hours WHERE course_id = ${courseId}`;
     await prisma.$executeRaw`DELETE FROM hidden_courses WHERE course_id = ${courseId}`;
     await prisma.$executeRaw`DELETE FROM dismissed_assignments WHERE course_id = ${courseId}`;
+    await prisma.$executeRaw`DELETE FROM focused_assignments WHERE course_id = ${courseId}`;
   }
 });

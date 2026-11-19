@@ -70,7 +70,12 @@ export function getWorkloadCourses(signal: AbortSignal) {
 }
 
 export function getAssignmentWorkspace(signal: AbortSignal) {
-  return request<{ courses: WorkloadCourse[]; dismissedAssignments: DismissedAssignment[]; timeReports: PersonalTimeReport[] }>(
+  return request<{
+    courses: WorkloadCourse[];
+    dismissedAssignments: DismissedAssignment[];
+    timeReports: PersonalTimeReport[];
+    focusedAssignments: { courseId: string; assignmentId: string }[];
+  }>(
     "/workload/courses?includeAssignmentPreferences=true", { signal },
   );
 }
@@ -99,6 +104,10 @@ export function saveCourseVisibility(courseId: string, hidden: boolean) {
 
 export function saveAssignmentDismissal(courseId: string, assignmentId: string, dismissed: boolean) {
   return put<{ dismissedAssignment: DismissedAssignment | null }>("/workload/assignments/dismissal", { courseId, assignmentId, dismissed });
+}
+
+export function saveAssignmentFocus(courseId: string, assignmentId: string, focused: boolean) {
+  return put<{ focused: boolean }>("/workload/assignments/focus", { courseId, assignmentId, focused });
 }
 
 export function saveWorkloadMinutes(courseId: string, assignmentId: string, minutes: number) {

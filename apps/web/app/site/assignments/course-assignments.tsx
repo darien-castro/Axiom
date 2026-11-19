@@ -2,22 +2,26 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { Menu } from "@base-ui/react/menu";
 import { Tabs } from "@base-ui/react/tabs";
-import { ArrowDown01Icon, ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUpRight01Icon, Bookmark01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import FocusConfirmation from "@/components/custom/focus/FocusConfirmation";
 import {
   assignmentDeadline, isClosed, sortAssignments, type AssignmentView, type CourseAssignment,
 } from "@/lib/assignment-ranking";
 import {
   assignmentAvailability, assignmentIdentity, formatWorkloadDate, getAssignmentWorkspace, getRankableAssignments,
-  removeWorkloadMinutes, saveAssignmentDismissal, saveWorkloadMinutes, WorkloadRequestError,
+  removeWorkloadMinutes, saveAssignmentDismissal, saveAssignmentFocus, saveWorkloadMinutes, WorkloadRequestError,
   type DismissedAssignment, type RankableAssignment, type TimeEstimate, type WorkloadCourse,
 } from "@/lib/course-workload";
 import DismissedAssignments from "./dismissed-assignments";
+
+type WorkspaceView = AssignmentView | "semester" | "focus";
 
 type AssignmentState =
   | { status: "loading" | "signed-out" | "error" }
@@ -26,15 +30,18 @@ type AssignmentState =
     courses: WorkloadCourse[];
     work: Record<string, RankableAssignment[] | null>;
     dismissedAssignments: DismissedAssignment[];
+    focusedIds: Set<string>;
     reportedMinutes: Map<string, number>;
     now: number;
   };
 
 const views = [
-  { id: "for-you", label: "For you", description: "Ordered by deadline, points, and effort, with an adjustment for your current grades." },
-  { id: "deadline", label: "Due / lock date", description: "Soonest first. The closing date is used when there’s no due date." },
+  { id: "for-you", label: "For you", description: "Personalized for you based on your current grades, upcoming deadlines, points, and time commitment." },
+  { id: "deadline", label: "Due / lock date", description: "Soonest first. The assignment lock date is used when there’s no due date." },
   { id: "grade-weight", label: "Grade weight", description: "Highest estimated share of the final course grade first." },
-  { id: "effort", label: "Effort", description: "Shortest reported time first. Work without estimates appears last." },
+  { id: "effort", label: "Duration", description: "Shortest reported time first. Work without estimates appears last." },
+  { id: "semester", label: "Chronological", description: "Earliest to latest across the semester, including completed and closed work." },
+  { id: "focus", label: "My Focus List", description: "Assignments you’ve saved, ordered by deadline." },
 ] as const;
 
 const gradeColors = {
@@ -48,16 +55,22 @@ export default function CourseAssignments() {
   const params = useSearchParams();
   const [state, setState] = useState<AssignmentState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
-  const [view, setView] = useState<AssignmentView>("for-you");
+  const [view, setView] = useState<WorkspaceView>("for-you");
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [dismissalStatus, setDismissalStatus] = useState("");
   const [dismissalError, setDismissalError] = useState<{ message: string; restoring: boolean } | null>(null);
+  const [savingFocus, setSavingFocus] = useState<Set<string>>(new Set());
+  const [pendingFocus, setPendingFocus] = useState<CourseAssignment | null>(null);
+  const [focusStatus, setFocusStatus] = useState("");
+  const [focusError, setFocusError] = useState("");
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const focusTab = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
       try {
-        const { courses, dismissedAssignments = [], timeReports = [] } = await getAssignmentWorkspace(controller.signal);
+        const { courses, dismissedAssignments = [], timeReports = [], focusedAssignments = [] } = await getAssignmentWorkspace(controller.signal);
         const visibleCourses = courses.filter(({ hidden }) => !hidden);
         const work: Record<string, RankableAssignment[] | null> = {};
         for (let i = 0; i < visibleCourses.length && !controller.signal.aborted; i += 4) {
@@ -74,7 +87,8 @@ export default function CourseAssignments() {
           const reportedMinutes = new Map(timeReports.map(({ courseId, assignmentId, minutes }) =>
             [assignmentIdentity(courseId, assignmentId), minutes],
           ));
-          setState({ status: "ready", courses, work, dismissedAssignments, reportedMinutes, now: Date.now() });
+          const focusedIds = new Set(focusedAssignments.map(({ courseId, assignmentId }) => assignmentIdentity(courseId, assignmentId)));
+          setState({ status: "ready", courses, work, dismissedAssignments, focusedIds, reportedMinutes, now: Date.now() });
         }
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -134,9 +148,40 @@ export default function CourseAssignments() {
     }
   }
 
+  async function changeFocus(assignment: CourseAssignment, focused: boolean, button?: HTMLButtonElement) {
+    const { assignmentId, assignmentName, course } = assignment;
+    const key = assignmentIdentity(course.courseId, assignmentId);
+    if (savingFocus.has(key)) return;
+    setSavingFocus((current) => new Set(current).add(key));
+    setFocusError("");
+    setFocusStatus("");
+
+    try {
+      const saved = await saveAssignmentFocus(course.courseId, assignmentId, focused);
+      if (!saved.focused && view === "focus" && button && document.activeElement === button) focusTab.current?.focus();
+      setState((current) => {
+        if (current.status !== "ready") return current;
+        const focusedIds = new Set(current.focusedIds);
+        if (saved.focused) focusedIds.add(key);
+        else focusedIds.delete(key);
+        return { ...current, focusedIds };
+      });
+      setFocusStatus(assignmentName + (saved.focused ? " added to My Focus List." : " removed from My Focus List."));
+    } catch (error) {
+      setFocusError(error instanceof WorkloadRequestError ? error.message : "Couldn’t update your Focus List. Try again.");
+    } finally {
+      setSavingFocus((current) => {
+        const remaining = new Set(current);
+        remaining.delete(key);
+        return remaining;
+      });
+    }
+  }
+
   const activeCourses = state.status === "ready" ? state.courses : [];
   const courses = activeCourses.filter(({ hidden }) => !hidden);
   const dismissed = state.status === "ready" ? state.dismissedAssignments : [];
+  const focusedIds = state.status === "ready" ? state.focusedIds : new Set<string>();
   const dismissedIds = new Set(dismissed.map(({ courseId, assignmentId }) => assignmentIdentity(courseId, assignmentId)));
   const requestedCourses = params.getAll("course");
   const selectedCourses = new Set(courses.filter(({ courseId }) =>
@@ -153,32 +198,53 @@ export default function CourseAssignments() {
 
   const now = state.status === "ready" ? state.now : 0;
   const filteredCourses = courses.filter(({ courseId }) => selectedCourses.has(courseId));
-  const assignments = state.status === "ready" ? filteredCourses.flatMap((course) =>
+  const allAssignments = state.status === "ready" ? courses.flatMap((course) =>
     (state.work[course.courseId] ?? [])
       .filter(({ assignmentId }) => !dismissedIds.has(assignmentIdentity(course.courseId, assignmentId)))
       .map((assignment) => ({ ...assignment, course })),
   ) : [];
+  const assignments = allAssignments.filter(({ course }) => selectedCourses.has(course.courseId));
+  const isFocused = ({ course, assignmentId }: CourseAssignment) => focusedIds.has(assignmentIdentity(course.courseId, assignmentId));
+  const focusCount = allAssignments.filter(isFocused).length;
   const failedCourses = state.status === "ready" && filteredCourses.filter(({ courseId }) => state.work[courseId] === null).length;
-  const outstanding = sortAssignments(assignments.filter((assignment) => assignment.outstanding && !isClosed(assignment, now)), view, now);
-  const archived = sortAssignments(assignments.filter((assignment) => !assignment.outstanding || isClosed(assignment, now)), view, now);
+  const showWholeList = view === "semester" || view === "focus";
+  const order = showWholeList ? "deadline" : view;
+  const activeAssignments = view === "focus" ? assignments.filter(isFocused)
+    : view === "semester" ? assignments : assignments.filter((assignment) => assignment.outstanding && !isClosed(assignment, now));
+  const displayed = sortAssignments(activeAssignments, order, now);
+  const archived = showWholeList ? [] : sortAssignments(assignments.filter((assignment) => !assignment.outstanding || isClosed(assignment, now)), order, now);
+  const activeView = views.find(({ id }) => id === view);
   const dismissedDialog = <DismissedAssignments assignments={dismissed} saving={saving}
     error={dismissalError?.restoring ? dismissalError.message : null}
     onRestore={(courseId, assignmentId) => void changeDismissal(courseId, assignmentId, false)} />;
   const listActions = {
     reportedMinutes: state.status === "ready" ? state.reportedMinutes : new Map<string, number>(),
+    focusedIds,
+    savingFocus,
     saving,
     onEstimate: updateEstimate,
     onDismiss: (courseId: string, assignmentId: string) => void changeDismissal(courseId, assignmentId, true),
+    onToggleFocus: (assignment: CourseAssignment, button: HTMLButtonElement) => {
+      if (isFocused(assignment)) void changeFocus(assignment, false, button);
+      else {
+        returnFocus.current = button;
+        setPendingFocus(assignment);
+      }
+    },
   };
 
-  return <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-9">
-    <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Assignments</h1>
-      {state.status === "ready" && assignments.length > 0 && <p className="text-sm text-muted-foreground">{outstanding.length} to do</p>}
+  return <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 md:gap-8 md:p-10">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Assignments</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Find and prioritize work across your Canvas courses.</p>
+      </div>
       {state.status === "ready" && !courses.length && dismissed.length > 0 && dismissedDialog}
     </header>
     <p role="status" className="sr-only">{dismissalStatus}</p>
+    <p role="status" className="sr-only">{focusStatus}</p>
     {dismissalError && <p role="alert" className="mb-3 text-sm text-destructive">{dismissalError.message}</p>}
+    {focusError && <p role="alert" className="text-sm text-destructive">{focusError}</p>}
 
     {state.status === "loading" && <p role="status" className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">Loading Canvas assignments…</p>}
     {state.status === "signed-out" && <div className="rounded-xl border border-border bg-card p-5">
@@ -196,38 +262,54 @@ export default function CourseAssignments() {
       {activeCourses.length > 0 ? <>All courses are hidden. <Link href="/site/settings#course-visibility" className="underline underline-offset-4">Edit course visibility</Link></> : "No active Canvas courses."}
     </p>}
 
-    {courses.length > 0 && <Tabs.Root value={view} onValueChange={(value) => setView(value as AssignmentView)}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-2.5 sm:p-3">
-        <Tabs.List aria-label="Assignment order" className="flex min-w-0 flex-wrap gap-1">
-          {views.map(({ id, label }) => <Tabs.Tab key={id} value={id}
-            className="rounded-lg px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring data-active:bg-primary/12 data-active:text-foreground sm:text-sm">
-            {label}
-          </Tabs.Tab>)}
-        </Tabs.List>
-        <div className="flex items-center gap-2">
-          <CourseFilter courses={courses} selected={selectedCourses} onChange={changeCourseFilter} />
-          {dismissedDialog}
-        </div>
-      </div>
+    {courses.length > 0 && <Tabs.Root value={view} onValueChange={(value) => setView(value as WorkspaceView)}>
+      <p className="mb-5 text-xs leading-relaxed text-muted-foreground md:mb-7">{activeView?.description}</p>
+      <Tabs.List aria-label="Assignment views" className="flex min-w-0 flex-wrap gap-2 border-b border-border/60 pb-3">
+        {views.map(({ id, label }) => <Tabs.Tab key={id} value={id}
+          ref={id === "focus" ? focusTab : undefined}
+          className="rounded-xl border border-transparent px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring data-active:border-primary/20 data-active:bg-primary/12 data-active:text-foreground sm:h-10 sm:px-4 sm:text-sm">
+          {label}
+          {id === "focus" && <span className="ml-2 text-xs tabular-nums text-muted-foreground">{focusCount}</span>}
+        </Tabs.Tab>)}
+      </Tabs.List>
 
-      {views.map(({ id, description }) => <Tabs.Panel key={id} value={id} className="mt-4 outline-none">
+      {views.map(({ id }) => <Tabs.Panel key={id} value={id} className="mt-6 outline-none md:mt-10">
         {id === view && <>
-          <p className="mb-3 text-xs text-muted-foreground">{description}</p>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5 sm:gap-4">
+            <h2 className="text-base font-semibold">
+              {view === "focus" ? "My Focus List" : view === "semester" ? "Semester assignments" : "To do"}
+              <span className="ml-2 text-xs font-normal text-muted-foreground">{displayed.length} shown</span>
+            </h2>
+            <div className="flex items-end gap-2">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground">Course</span>
+                <CourseFilter courses={courses} selected={selectedCourses} onChange={changeCourseFilter} />
+              </div>
+              {dismissedDialog}
+            </div>
+          </div>
           {Boolean(failedCourses) && <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 text-sm">
             <p role="alert">Work couldn’t be loaded for {failedCourses} {failedCourses === 1 ? "course" : "courses"}.</p>
-            <Button type="button" variant="outline" disabled={saving.size > 0} onClick={retry}>Retry</Button>
+            <Button type="button" variant="outline" disabled={saving.size > 0 || savingFocus.size > 0} onClick={retry}>Retry</Button>
           </div>}
-          {outstanding.length ? <AssignmentList assignments={outstanding} now={now} {...listActions} />
+          {displayed.length ? <AssignmentList assignments={displayed} now={now} {...listActions} />
             : <p className="rounded-xl border border-border bg-card p-5 text-sm">
-              {!filteredCourses.length ? "Select courses to see their assignments." : "No outstanding assignments in these courses."}
+              {!filteredCourses.length ? "Select courses to see their assignments." : view === "focus"
+                ? "Use Add to Focus on any assignment to save it here." : view === "semester"
+                  ? "No assignments in these courses." : "No outstanding assignments in these courses."}
             </p>}
-          {archived.length > 0 && <details className="mt-4 rounded-xl border border-border bg-card">
-            <summary className="cursor-pointer rounded-xl px-4 py-3 text-sm font-medium">Completed and closed <span className="ml-1 text-xs text-muted-foreground">{archived.length}</span></summary>
-            <AssignmentList assignments={archived} now={now} {...listActions} />
+          {archived.length > 0 && <details className="mt-6 md:mt-8">
+            <summary className="cursor-pointer rounded-xl border border-border/80 bg-card px-4 py-3 text-sm font-medium">Completed and closed <span className="ml-1 text-xs text-muted-foreground">{archived.length}</span></summary>
+            <div className="mt-3"><AssignmentList assignments={archived} now={now} {...listActions} /></div>
           </details>}
         </>}
       </Tabs.Panel>)}
     </Tabs.Root>}
+    <FocusConfirmation assignment={pendingFocus ? { title: pendingFocus.assignmentName } : null} returnFocus={returnFocus}
+      onCancel={() => setPendingFocus(null)} onConfirm={() => {
+        if (pendingFocus) void changeFocus(pendingFocus, true);
+        setPendingFocus(null);
+      }} />
   </div>;
 }
 
@@ -238,7 +320,7 @@ function CourseFilter({ courses, selected, onChange }: {
 }) {
   const all = selected.size === courses.length;
   return <Menu.Root>
-    <Menu.Trigger render={<Button variant="outline" size="lg" className="h-9 gap-2" />}>
+    <Menu.Trigger render={<Button variant="outline" size="lg" className="h-9 min-w-32 justify-between gap-3 rounded-lg bg-card px-3" />}>
       {all ? "All courses" : selected.size + (selected.size === 1 ? " course" : " courses")}
       <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden="true" className="size-4 text-muted-foreground" />
     </Menu.Trigger>
@@ -274,30 +356,38 @@ function CourseCheckmark() {
 type AssignmentActions = {
   onEstimate: (courseId: string, assignmentId: string, estimate: TimeEstimate, minutes: number | null) => void;
   onDismiss: (courseId: string, assignmentId: string) => void;
+  onToggleFocus: (assignment: CourseAssignment, button: HTMLButtonElement) => void;
 };
 
-function AssignmentList({ assignments, now, reportedMinutes, saving, onEstimate, onDismiss }: AssignmentActions & {
+function AssignmentList({ assignments, now, reportedMinutes, focusedIds, savingFocus, saving, onEstimate, onDismiss, onToggleFocus }: AssignmentActions & {
   assignments: CourseAssignment[];
   now: number;
   reportedMinutes: ReadonlyMap<string, number>;
+  focusedIds: ReadonlySet<string>;
+  savingFocus: ReadonlySet<string>;
   saving: ReadonlySet<string>;
 }) {
-  return <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
+  return <ul className="grid gap-3.5">
     {assignments.map((assignment) => {
       const key = assignmentIdentity(assignment.course.courseId, assignment.assignmentId);
       return <AssignmentRow key={key} assignment={assignment} now={now} reportedMinutes={reportedMinutes.get(key)}
-        dismissing={saving.has(key)} onEstimate={onEstimate} onDismiss={onDismiss} />;
+        focused={focusedIds.has(key)} savingFocus={savingFocus.has(key)} dismissing={saving.has(key)}
+        onEstimate={onEstimate} onDismiss={onDismiss} onToggleFocus={onToggleFocus} />;
     })}
   </ul>;
 }
 
-function AssignmentRow({ assignment, now, reportedMinutes, dismissing, onEstimate, onDismiss }: AssignmentActions & {
+function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus, dismissing, onEstimate, onDismiss, onToggleFocus }: AssignmentActions & {
   assignment: CourseAssignment;
   now: number;
   reportedMinutes?: number;
+  focused: boolean;
+  savingFocus: boolean;
   dismissing: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [effortOpen, setEffortOpen] = useState(false);
+  const effortPanelId = useId();
   const [effortAction, setEffortAction] = useState<"saving" | "removing" | null>(null);
   const [message, setMessage] = useState("");
   const { course, assignmentId } = assignment;
@@ -305,6 +395,7 @@ function AssignmentRow({ assignment, now, reportedMinutes, dismissing, onEstimat
   const availability = assignmentAvailability(assignment, now);
   const status = availability.startsWith("Closes") ? "" : availability;
   const grade = !assignment.outstanding ? assignmentGradeBadge(assignment) : null;
+  const points = assignment.pointsPossible == null ? "Unavailable" : assignment.pointsPossible.toLocaleString() + " pts";
   const weight = assignment.gradeImpactPercent == null ? "Unavailable" :
     assignment.gradeImpactPercent.toLocaleString(undefined, { maximumFractionDigits: 2 }) + "%";
   const effort = assignment.estimatedMinutes == null ? "No estimate" : formatEffort(assignment.estimatedMinutes);
@@ -361,49 +452,64 @@ function AssignmentRow({ assignment, now, reportedMinutes, dismissing, onEstimat
   }
 
   return <ContextMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
-    <ContextMenu.Trigger render={<li className="px-4 py-4 sm:px-5" />} onKeyDown={openMenuFromKeyboard}>
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] xl:items-center">
-        <div className="min-w-0">
-          <p className="mb-0.5 text-xs text-muted-foreground">{course.courseCode || course.courseName}</p>
-          <a className="inline-flex items-center gap-1.5 wrap-anywhere font-semibold hover:underline underline-offset-4"
+    <ContextMenu.Trigger render={<li className="rounded-2xl border border-border/80 bg-card p-4 text-card-foreground shadow-xs sm:p-5 md:p-6" />} onKeyDown={openMenuFromKeyboard}>
+      <div>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {course.courseCode && <Badge variant="secondary" className="font-mono">{course.courseCode}</Badge>}
+          {course.courseName !== course.courseCode && <span className="wrap-anywhere text-xs text-muted-foreground">{course.courseName}</span>}
+        </div>
+        <h3 className="text-base font-semibold tracking-tight">
+          <a className="inline-flex items-center gap-1.5 wrap-anywhere underline-offset-4 hover:underline"
             target="_blank" rel="noreferrer" href={course.canvasUrl + "/assignments/" + encodeURIComponent(assignmentId)}>
             {assignment.assignmentName}
             <HugeiconsIcon icon={ArrowUpRight01Icon} aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
           </a>
-          {status && <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span>{status}</span>
-            {grade && <span className={"rounded-full px-2 py-0.5 font-medium tabular-nums " + gradeColors[grade.color]}>
-              Grade {grade.text}
-            </span>}
-          </p>}
-        </div>
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm sm:grid-cols-[minmax(0,1.65fr)_repeat(2,minmax(0,1fr))]">
-          <div className="col-span-2 sm:col-span-1">
-            <dt className="text-xs text-muted-foreground">Deadline</dt>
-            <dd className="mt-0.5">{deadline.date ? <time dateTime={deadline.date}>{deadline.label} {formatWorkloadDate(deadline.date)}</time> : "No deadline"}</dd>
-          </div>
-          <div><dt className="text-xs text-muted-foreground">Grade weight</dt><dd className="mt-0.5">{weight}</dd></div>
-          <div><dt className="text-xs text-muted-foreground">Estimated effort</dt><dd className="mt-0.5">{effort}</dd></div>
-        </dl>
+        </h3>
+        {status && <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span>{status}</span>
+          {grade && <span className={"rounded-full px-2 py-0.5 font-medium tabular-nums " + gradeColors[grade.color]}>
+            Grade {grade.text}
+          </span>}
+        </p>}
       </div>
-      <details className="mt-2.5 text-xs">
-        <summary className="w-fit cursor-pointer font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground">
-          {reportedMinutes === undefined ? "Report time spent" : "Edit reported effort"}
-        </summary>
-        <form onSubmit={reportTime} className="mt-2.5 flex flex-wrap items-end gap-2">
-          <label className="grid gap-1">Minutes spent
-            <input key={reportedMinutes ?? "new"} name="minutes" type="number" min="1" step="1" required defaultValue={reportedMinutes}
-              className="h-8 w-28 rounded-md border border-border bg-background px-2 text-sm" />
-          </label>
-          <Button size="lg" variant="outline" type="submit" disabled={effortAction !== null}>{effortAction === "saving" ? "Saving…" : "Save time"}</Button>
-          {reportedMinutes !== undefined && <Button size="lg" variant="ghost" type="button" disabled={effortAction !== null}
-            onClick={() => void saveEffort(null)} className="text-destructive">
-            {effortAction === "removing" ? "Removing…" : "Remove report"}
-          </Button>}
-        </form>
-        {assignment.reportCount > 0 && <p className="mt-2 text-muted-foreground">Estimate based on {assignment.reportCount} {assignment.reportCount === 1 ? "report" : "reports"}.</p>}
-        {message && <p role="status" className="mt-1">{message}</p>}
-      </details>
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs lg:grid-cols-4 lg:gap-x-6">
+        <div><dt className="text-muted-foreground">Points possible</dt><dd className="mt-1 font-medium">{points}</dd></div>
+        <div><dt className="text-muted-foreground">Estimated effort</dt><dd className="mt-1 font-medium">{effort}</dd></div>
+        <div><dt className="text-muted-foreground">Grade weight</dt><dd className="mt-1 font-medium">{weight}</dd></div>
+        <div><dt className="text-muted-foreground">Deadline</dt>
+          <dd className="mt-1 font-medium">{deadline.date ? <time dateTime={deadline.date}>{deadline.label} {formatWorkloadDate(deadline.date)}</time> : "No deadline"}</dd>
+        </div>
+      </dl>
+      <div className="mt-4 border-t border-border/60 pt-3 text-xs">
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" className="h-auto min-h-9 min-w-0 shrink gap-1.5 whitespace-normal rounded-lg px-2 py-1 leading-tight sm:px-3" aria-expanded={effortOpen} aria-controls={effortPanelId}
+            onClick={() => setEffortOpen((open) => !open)}>
+            {reportedMinutes === undefined ? "Report time spent" : "Edit reported effort"}
+            <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden="true" className={"size-3.5 text-muted-foreground" + (effortOpen ? " rotate-180" : "")} />
+          </Button>
+          <Button type="button" variant="outline" className={"h-auto min-h-9 min-w-0 shrink gap-1.5 whitespace-normal rounded-lg px-2 py-1 leading-tight sm:px-3" + (focused ? " border-primary/30 bg-primary/10" : "")}
+            aria-pressed={focused} aria-label={(focused ? "Remove from Focus: " : "Add to Focus: ") + assignment.assignmentName}
+            disabled={savingFocus} focusableWhenDisabled onClick={(event) => onToggleFocus(assignment, event.currentTarget)}>
+            <HugeiconsIcon icon={Bookmark01Icon} aria-hidden="true" className="size-3.5" />
+            {savingFocus ? "Saving…" : focused ? "Remove from Focus" : "Add to Focus"}
+          </Button>
+        </div>
+        <div id={effortPanelId} hidden={!effortOpen}>
+          <form onSubmit={reportTime} className="mt-3 flex flex-wrap items-end justify-end gap-2">
+            <label className="grid gap-1">Minutes spent
+              <input key={reportedMinutes ?? "new"} name="minutes" type="number" min="1" step="1" required defaultValue={reportedMinutes}
+                className="h-8 w-28 rounded-md border border-border bg-background px-2 text-sm" />
+            </label>
+            <Button size="lg" variant="outline" type="submit" disabled={effortAction !== null}>{effortAction === "saving" ? "Saving…" : "Save time"}</Button>
+            {reportedMinutes !== undefined && <Button size="lg" variant="ghost" type="button" disabled={effortAction !== null}
+              onClick={() => void saveEffort(null)} className="text-destructive">
+              {effortAction === "removing" ? "Removing…" : "Remove report"}
+            </Button>}
+          </form>
+          {assignment.reportCount > 0 && <p className="mt-2 text-right text-muted-foreground">Estimate based on {assignment.reportCount} {assignment.reportCount === 1 ? "report" : "reports"}.</p>}
+          {message && <p role="status" className="mt-1 text-right">{message}</p>}
+        </div>
+      </div>
     </ContextMenu.Trigger>
     <ContextMenu.Portal>
       <ContextMenu.Positioner className="z-50" sideOffset={4}>

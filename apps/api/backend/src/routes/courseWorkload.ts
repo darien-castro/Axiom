@@ -41,15 +41,16 @@ function studentRoute<Params extends Partial<CourseParams>>(
 
 router.get('/workload/courses', authenticateSession, studentRoute(async (req, res, { studentId, courses }) => {
   const includeAssignmentPreferences = req.query.includeAssignmentPreferences === 'true';
-  const [creditRows, hiddenRows, dismissedAssignments, timeReports] = await Promise.all([
+  const [creditRows, hiddenRows, dismissedAssignments, timeReports, focusedAssignments] = await Promise.all([
     db.getCourseCreditHours(studentId),
     db.getHiddenCourses(studentId),
     includeAssignmentPreferences ? db.getDismissedAssignments(studentId) : undefined,
     includeAssignmentPreferences ? db.getStudentTimeReports(studentId) : undefined,
+    includeAssignmentPreferences ? db.getFocusedAssignments(studentId) : undefined,
   ]);
   const credits = new Map(creditRows.map((course) => [course.courseId, course.creditHours]));
   const hidden = new Set(hiddenRows.map((course) => course.courseId));
-  res.json({ dismissedAssignments, timeReports, courses: courses.map((course) => {
+  res.json({ dismissedAssignments, timeReports, focusedAssignments, courses: courses.map((course) => {
     const courseId = String(course.id);
     const [clean] = cleanCourses([course]);
     const student = course.enrollments?.find((enrollment) => enrollment.type === 'student' || enrollment.type === 'StudentEnrollment');
@@ -65,6 +66,29 @@ router.get('/workload/courses', authenticateSession, studentRoute(async (req, re
       canvasUrl: `${canvasBaseUrl}/courses/${encodeURIComponent(courseId)}`,
     };
   }) });
+}));
+
+router.put('/workload/assignments/focus', authenticateSession, studentRoute(async (req, res, { canvas, studentId, courses }) => {
+  const { courseId, assignmentId, focused } = req.body ?? {};
+  if (typeof courseId !== 'string' || !courseId || typeof assignmentId !== 'string' || !assignmentId || typeof focused !== 'boolean') {
+    res.status(400).json({ error: 'An assignment, course, and focus state are required.' });
+    return;
+  }
+
+  if (focused) {
+    if (!courses.some(({ id }) => String(id) === courseId)) {
+      res.status(404).json({ error: 'This course is not in your active Canvas enrollments.' });
+      return;
+    }
+    const assignment = await canvas.GetCourseAssignment(courseId, assignmentId);
+    if (String(assignment.id) !== assignmentId) {
+      res.status(404).json({ error: 'This assignment could not be found in Canvas.' });
+      return;
+    }
+  }
+
+  await db.saveAssignmentFocus(studentId, courseId, assignmentId, focused);
+  res.json({ focused });
 }));
 
 router.put('/workload/assignments/dismissal', authenticateSession, studentRoute(async (req, res, { canvas, studentId, courses }) => {

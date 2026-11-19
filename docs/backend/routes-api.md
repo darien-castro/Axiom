@@ -90,7 +90,8 @@ All backend routes are mounted under the `/api` prefix on port `5000`.
 ### Course workload
 
 - `GET /api/workload/courses` returns active Canvas courses and grades, alongside the signed-in student’s saved credit hours and `hidden` flag for each course.
-- Add `?includeAssignmentPreferences=true` to include the signed-in student's `dismissedAssignments` and personal `timeReports`.
+- Add `?includeAssignmentPreferences=true` to include the signed-in student's `focusedAssignments`, `dismissedAssignments`, and personal `timeReports`.
+- `PUT /api/workload/assignments/focus` accepts `courseId`, `assignmentId`, and a boolean `focused`. It sets membership in the signed-in student's focus list and returns `{ "focused": true }` or `{ "focused": false }`.
 - `PUT /api/workload/assignments/dismissal` accepts `courseId`, `assignmentId`, and a boolean `dismissed`. It returns the saved entry as `dismissedAssignment`, or `null` after a restore. Restore also works after a course becomes inactive.
 - `PUT /api/workload/courses/:courseID/visibility` accepts `{"hidden": true}` to hide the course or `{"hidden": false}` to show it. This preference applies to the workload map.
 - `PUT /api/workload/courses/:courseID/credits` accepts `{"creditHours": 3}` and saves that student's credit hours for the course.

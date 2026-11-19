@@ -34,7 +34,9 @@ Docs: [Overview](docs/README.md) · [Backend](docs/backend/README.md) · [Fronte
 
 The base ranking combines deadline urgency (65%), Canvas points possible (30%), and estimated effort (5%). Axiom uses the due date or, when it’s missing, the Canvas lock date. Longer assignments get a head start based on the median time reported by students.
 
-**For you** adds a boost for assignments with more grade impact in courses where your current grade is lower. The **Due / lock date**, **Grade weight**, and **Effort** views each sort by their named field. [Ranking implementation](apps/web/lib/assignment-ranking.ts)
+**For you** adds a boost for assignments with more grade impact in courses where your current grade is lower. The **Due / lock date**, **Grade weight**, and **Duration** views each sort by their named field. [Ranking implementation](apps/web/lib/assignment-ranking.ts)
+
+**Chronological** shows the full semester in deadline order, including completed and closed assignments. Use **Add to Focus** to save individual assignments to **My Focus List**.
 
 ## Status
 

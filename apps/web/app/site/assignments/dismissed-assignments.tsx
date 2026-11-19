@@ -42,7 +42,7 @@ export default function DismissedAssignments({ assignments, saving, error, onRes
                 </Button>
               </li>;
             })}
-          </ul> : <p className="py-5 text-sm text-muted-foreground">No dismissed assignments.</p>}
+          </ul> : <p className="py-5 text-sm text-muted-foreground">No dismissed assignments. You can dismiss assignments by right-clicking them. </p>}
         </div>
         <div className="flex shrink-0 justify-end border-t border-border px-5 py-3 sm:px-6">
           <Dialog.Close render={<Button type="button" size="lg" className="min-w-16" />}>Done</Dialog.Close>
