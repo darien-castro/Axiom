@@ -9,7 +9,7 @@ export interface WorkloadCourse {
   gradeLetter: string | null;
   creditHours: number | null;
   hidden: boolean;
-  canvasUrl: string;
+  canvasUrl: string | null;
 }
 
 export interface TimeEstimate {
@@ -117,6 +117,20 @@ export function saveWorkloadMinutes(courseId: string, assignmentId: string, minu
 export function removeWorkloadMinutes(courseId: string, assignmentId: string) {
   return request<TimeEstimate>(`/workload/courses/${encodeURIComponent(courseId)}/assignments/${encodeURIComponent(assignmentId)}/time`, { method: "DELETE" });
 }
+
+export const canvasWorkload = {
+  now: Date.now,
+  getWorkloadCourses,
+  getAssignmentWorkspace,
+  getWorkloadAssignments,
+  getRankableAssignments,
+  saveWorkloadCredits,
+  saveCourseVisibility,
+  saveAssignmentDismissal,
+  saveAssignmentFocus,
+  saveWorkloadMinutes,
+  removeWorkloadMinutes,
+};
 
 export function dueTime(assignment: WorkloadAssignment): number {
   const time = assignment.dueAt ? Date.parse(assignment.dueAt) : NaN;

@@ -6,9 +6,10 @@ import { saveCourseVisibility, WorkloadRequestError, type WorkloadCourse } from 
 
 type CourseVisibility = Pick<WorkloadCourse, "courseId" | "courseName" | "courseCode" | "hidden">;
 
-export default function CourseVisibilityControls({ courses, onChange }: {
+export default function CourseVisibilityControls({ courses, onChange, saveVisibility }: {
   courses: CourseVisibility[];
   onChange: (courseId: string, hidden: boolean) => void;
+  saveVisibility: typeof saveCourseVisibility;
 }) {
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -20,7 +21,7 @@ export default function CourseVisibilityControls({ courses, onChange }: {
     setErrors((current) => ({ ...current, [courseId]: undefined }));
     setStatus("");
     try {
-      const { hidden } = await saveCourseVisibility(courseId, !course.hidden);
+      const { hidden } = await saveVisibility(courseId, !course.hidden);
       onChange(courseId, hidden);
       setStatus(hidden ? `${courseName} is now hidden.` : `${courseName} is now visible.`);
     } catch (error) {

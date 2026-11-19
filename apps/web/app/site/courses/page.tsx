@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import CourseVisibilityControls from "@/components/custom/CourseVisibilityControls";
 import {
-  assignmentAvailability, formatWorkloadDate, getWorkloadAssignments, getWorkloadCourses,
-  saveWorkloadCredits, summarizeWorkload, workloadHoursLabel, WorkloadRequestError,
+  assignmentAvailability, canvasWorkload, formatWorkloadDate, summarizeWorkload, workloadHoursLabel, WorkloadRequestError,
   type WorkloadAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
+import { demoWorkload, demoWorkloadLabel } from "@/lib/demo-workload";
 import styles from "./workload.module.css";
 
 type CourseRow = WorkloadCourse & { assignments: WorkloadAssignment[] | null };
@@ -17,6 +18,18 @@ const pressureLabels = ["Stable", "Busy", "Overloaded"] as const;
 const pressureClasses = { Stable: styles.stable, Busy: styles.busy, Overloaded: styles.overloaded, Unknown: styles.unknown };
 
 export default function CoursesPage() {
+  return <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading courses…</p>}>
+    <CoursesView />
+  </Suspense>;
+}
+
+function CoursesView() {
+  const demo = useSearchParams().get("demo") === "1";
+  return <CourseWorkload key={demo ? "demo" : "canvas"} demo={demo} />;
+}
+
+function CourseWorkload({ demo }: { demo: boolean }) {
+  const workload = demo ? demoWorkload : canvasWorkload;
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [selection, setSelection] = useState<string>();
   const [attempt, setAttempt] = useState(0);
@@ -26,10 +39,10 @@ export default function CoursesPage() {
 
     async function load() {
       try {
-        const { courses } = await getWorkloadCourses(controller.signal);
-        const results = await Promise.allSettled(courses.map((course) => getWorkloadAssignments(course.courseId, controller.signal)));
+        const { courses } = await workload.getWorkloadCourses(controller.signal);
+        const results = await Promise.allSettled(courses.map((course) => workload.getWorkloadAssignments(course.courseId, controller.signal)));
         if (controller.signal.aborted) return;
-        setState({ status: "ready", now: Date.now(), courses: courses.map((course, index) => {
+        setState({ status: "ready", now: workload.now(), courses: courses.map((course, index) => {
           const result = results[index];
           return { ...course, assignments: result.status === "fulfilled" ? result.value.assignments : null };
         }) });
@@ -41,7 +54,7 @@ export default function CoursesPage() {
 
     void load();
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, workload]);
 
   function retry() {
     setState({ status: "loading" });
@@ -94,6 +107,7 @@ export default function CoursesPage() {
       <header className={styles.header}>
         <div>
           <h1>Courses</h1>
+          {demo && <p>{demoWorkloadLabel}</p>}
         </div>
         <ul className={styles.legend} aria-label="Deadline pressure legend">
           {pressureLabels.map((label) => <li key={label} className={pressureClasses[label]}><span />{label}</li>)}
@@ -105,6 +119,7 @@ export default function CoursesPage() {
         <h2>Connect Canvas to see your courses</h2>
         <p>Sign in to view your deadlines, credits, and weekly workload.</p>
         <Link href="/" className={styles.action}>Sign in with Canvas</Link>
+        <Link href="/site/courses?demo=1" className={`${styles.textLink} ml-3`}>Try demo courses</Link>
       </div>}
       {state.status === "error" && <div className={styles.notice} role="alert">
         <h2>Couldn’t load your courses</h2>
@@ -127,7 +142,7 @@ export default function CoursesPage() {
           </summary>
           <div className="mt-3">
             <p className="mb-2 text-xs text-muted-foreground">Hidden courses still count toward your workload totals.</p>
-            <CourseVisibilityControls courses={courses} onChange={updateVisibility} />
+            <CourseVisibilityControls courses={courses} onChange={updateVisibility} saveVisibility={workload.saveCourseVisibility} />
           </div>
         </details>
       </>}
@@ -171,7 +186,7 @@ export default function CoursesPage() {
               </div>
             </div>
             <div className={styles.detailBody}>
-              <a href={selected.canvasUrl} className={styles.canvasLink} target="_blank" rel="noreferrer">Open course in Canvas <span aria-hidden="true">↗</span></a>
+              {selected.canvasUrl && <a href={selected.canvasUrl} className={styles.canvasLink} target="_blank" rel="noreferrer">Open course in Canvas <span aria-hidden="true">↗</span></a>}
               <div className={styles.pressure}>
                 <strong>{selected.summary?.pressure ?? "Deadlines unavailable"}</strong>
                 {selected.summary ? <p>{selected.summary.dueSoon} {selected.summary.dueSoon === 1 ? "assignment" : "assignments"} due in the next five days.</p>
@@ -182,7 +197,7 @@ export default function CoursesPage() {
                 <div><dt>Work this week</dt><dd>{selected.summary ? workloadHoursLabel(selected.summary.week) : "Unavailable"}</dd>
                   {selected.summary && <small>{selected.summary.week.estimated} of {selected.summary.week.total} estimated</small>}</div>
               </dl>
-              <CreditEditor key={selected.courseId} course={selected} onSave={updateCredits} />
+              <CreditEditor key={selected.courseId} course={selected} onSave={updateCredits} saveCredits={workload.saveWorkloadCredits} />
               <section className={styles.upcoming} aria-labelledby="upcoming-work-title">
                 <h3 id="upcoming-work-title">Upcoming work</h3>
                 {selected.summary?.upcoming.length ? <ul>{selected.summary.upcoming.map((assignment) => {
@@ -193,7 +208,7 @@ export default function CoursesPage() {
                     {availability && <small>{availability}</small>}
                   </li>;
                 })}</ul> : <p>{selected.summary ? "No upcoming deadlines." : "Assignment dates could not be loaded."}</p>}
-                <Link className={styles.allAssignments} href={`/site/assignments?course=${encodeURIComponent(selected.courseId)}`}>View all assignments <span aria-hidden="true">→</span></Link>
+                <Link className={styles.allAssignments} href={`/site/assignments?course=${encodeURIComponent(selected.courseId)}${demo ? "&demo=1" : ""}`}>View all assignments <span aria-hidden="true">→</span></Link>
               </section>
             </div>
           </aside>
@@ -203,7 +218,11 @@ export default function CoursesPage() {
   );
 }
 
-function CreditEditor({ course, onSave }: { course: WorkloadCourse; onSave: (courseId: string, creditHours: number) => void }) {
+function CreditEditor({ course, onSave, saveCredits }: {
+  course: WorkloadCourse;
+  onSave: (courseId: string, creditHours: number) => void;
+  saveCredits: typeof canvasWorkload.saveWorkloadCredits;
+}) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -212,7 +231,7 @@ function CreditEditor({ course, onSave }: { course: WorkloadCourse; onSave: (cou
     const creditHours = Number(new FormData(event.currentTarget).get("credits"));
     setSaving(true);
     try {
-      const saved = await saveWorkloadCredits(course.courseId, creditHours);
+      const saved = await saveCredits(course.courseId, creditHours);
       onSave(course.courseId, saved.creditHours);
       setMessage("Credit hours saved.");
     } catch (error) {

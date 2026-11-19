@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useRef, useSyncExternalStore } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   PaintBoardIcon,
   Sun01Icon,
@@ -67,6 +67,25 @@ function checkSessionSnapshot() {
 }
 
 export default function SettingsPage() {
+  return <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading settings…</p>}>
+    <SettingsView />
+  </Suspense>;
+}
+
+function SettingsView() {
+  if (useSearchParams().get("demo") === "1") {
+    return <div className="mx-auto flex max-w-6xl flex-col gap-8 p-6 md:p-10">
+      <header className="border-b border-border/60 pb-4">
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Demo mode · Changes are saved in this browser.</p>
+      </header>
+      <CourseVisibilitySettings demo />
+    </div>;
+  }
+  return <CanvasSettings />;
+}
+
+function CanvasSettings() {
   const router = useRouter();
 
   // Hydration & external store sync

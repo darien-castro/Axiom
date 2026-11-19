@@ -15,10 +15,10 @@ import {
   assignmentDeadline, isClosed, sortAssignments, type AssignmentView, type CourseAssignment,
 } from "@/lib/assignment-ranking";
 import {
-  assignmentAvailability, assignmentIdentity, formatWorkloadDate, getAssignmentWorkspace, getRankableAssignments,
-  removeWorkloadMinutes, saveAssignmentDismissal, saveAssignmentFocus, saveWorkloadMinutes, WorkloadRequestError,
-  type DismissedAssignment, type RankableAssignment, type TimeEstimate, type WorkloadCourse,
+  assignmentAvailability, assignmentIdentity, canvasWorkload, formatWorkloadDate, WorkloadRequestError,
+  type DismissedAssignment, type RankableAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
+import { demoWorkload, demoWorkloadLabel, getDemoAssignment } from "@/lib/demo-workload";
 import DismissedAssignments from "./dismissed-assignments";
 
 type WorkspaceView = AssignmentView | "semester" | "focus";
@@ -51,8 +51,9 @@ const gradeColors = {
   neutral: "bg-muted text-foreground",
 };
 
-export default function CourseAssignments() {
+export default function CourseAssignments({ demo }: { demo: boolean }) {
   const params = useSearchParams();
+  const workload = demo ? demoWorkload : canvasWorkload;
   const [state, setState] = useState<AssignmentState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [view, setView] = useState<WorkspaceView>("for-you");
@@ -70,13 +71,13 @@ export default function CourseAssignments() {
     const controller = new AbortController();
     async function load() {
       try {
-        const { courses, dismissedAssignments = [], timeReports = [], focusedAssignments = [] } = await getAssignmentWorkspace(controller.signal);
+        const { courses, dismissedAssignments = [], timeReports = [], focusedAssignments = [] } = await workload.getAssignmentWorkspace(controller.signal);
         const visibleCourses = courses.filter(({ hidden }) => !hidden);
         const work: Record<string, RankableAssignment[] | null> = {};
         for (let i = 0; i < visibleCourses.length && !controller.signal.aborted; i += 4) {
           await Promise.all(visibleCourses.slice(i, i + 4).map(async ({ courseId }) => {
             try {
-              const { assignments } = await getRankableAssignments(courseId, controller.signal);
+              const { assignments } = await workload.getRankableAssignments(courseId, controller.signal);
               work[courseId] = assignments;
             } catch {
               work[courseId] = null;
@@ -88,7 +89,7 @@ export default function CourseAssignments() {
             [assignmentIdentity(courseId, assignmentId), minutes],
           ));
           const focusedIds = new Set(focusedAssignments.map(({ courseId, assignmentId }) => assignmentIdentity(courseId, assignmentId)));
-          setState({ status: "ready", courses, work, dismissedAssignments, focusedIds, reportedMinutes, now: Date.now() });
+          setState({ status: "ready", courses, work, dismissedAssignments, focusedIds, reportedMinutes, now: workload.now() });
         }
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -98,14 +99,16 @@ export default function CourseAssignments() {
     }
     void load();
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, workload]);
 
   function retry() {
     setState({ status: "loading" });
     setAttempt((previous) => previous + 1);
   }
 
-  function updateEstimate(courseId: string, assignmentId: string, estimate: TimeEstimate, minutes: number | null) {
+  async function updateEstimate(courseId: string, assignmentId: string, minutes: number | null) {
+    const estimate = minutes === null ? await workload.removeWorkloadMinutes(courseId, assignmentId)
+      : await workload.saveWorkloadMinutes(courseId, assignmentId, minutes);
     setState((current) => {
       if (current.status !== "ready" || !current.work[courseId]) return current;
       const assignments = current.work[courseId].map((assignment) =>
@@ -127,7 +130,7 @@ export default function CourseAssignments() {
     setDismissalStatus("");
 
     try {
-      const { dismissedAssignment } = await saveAssignmentDismissal(courseId, assignmentId, dismissed);
+      const { dismissedAssignment } = await workload.saveAssignmentDismissal(courseId, assignmentId, dismissed);
       setState((current) => {
         if (current.status !== "ready") return current;
         const otherAssignments = current.dismissedAssignments.filter((item) => assignmentIdentity(item.courseId, item.assignmentId) !== key);
@@ -157,7 +160,7 @@ export default function CourseAssignments() {
     setFocusStatus("");
 
     try {
-      const saved = await saveAssignmentFocus(course.courseId, assignmentId, focused);
+      const saved = await workload.saveAssignmentFocus(course.courseId, assignmentId, focused);
       if (!saved.focused && view === "focus" && button && document.activeElement === button) focusTab.current?.focus();
       setState((current) => {
         if (current.status !== "ready") return current;
@@ -237,7 +240,7 @@ export default function CourseAssignments() {
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Assignments</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Find and prioritize work across your Canvas courses.</p>
+        <p className="mt-1 text-sm text-muted-foreground">{demo ? demoWorkloadLabel : "Find and prioritize work across your Canvas courses."}</p>
       </div>
       {state.status === "ready" && !courses.length && dismissed.length > 0 && dismissedDialog}
     </header>
@@ -246,7 +249,7 @@ export default function CourseAssignments() {
     {dismissalError && <p role="alert" className="mb-3 text-sm text-destructive">{dismissalError.message}</p>}
     {focusError && <p role="alert" className="text-sm text-destructive">{focusError}</p>}
 
-    {state.status === "loading" && <p role="status" className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">Loading Canvas assignments…</p>}
+    {state.status === "loading" && <p role="status" className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{demo ? "Loading sample assignments…" : "Loading Canvas assignments…"}</p>}
     {state.status === "signed-out" && <div className="rounded-xl border border-border bg-card p-5">
       <h2 className="font-semibold">Connect Canvas to see your assignments</h2>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
@@ -259,11 +262,14 @@ export default function CourseAssignments() {
       <Button type="button" variant="outline" onClick={retry}>Try again</Button>
     </div>}
     {state.status === "ready" && !courses.length && <p className="rounded-xl border border-border bg-card p-5 text-sm">
-      {activeCourses.length > 0 ? <>All courses are hidden. <Link href="/site/settings#course-visibility" className="underline underline-offset-4">Edit course visibility</Link></> : "No active Canvas courses."}
+      {activeCourses.length > 0 ? <>All courses are hidden. <Link href={demo ? "/site/settings?demo=1#course-visibility" : "/site/settings#course-visibility"} className="underline underline-offset-4">Edit course visibility</Link></> : "No active Canvas courses."}
     </p>}
 
     {courses.length > 0 && <Tabs.Root value={view} onValueChange={(value) => setView(value as WorkspaceView)}>
-      <p className="mb-5 text-xs leading-relaxed text-muted-foreground md:mb-7">{activeView?.description}</p>
+      <p className="mb-5 text-xs leading-relaxed text-muted-foreground md:mb-7">{
+        demo && view === "for-you" ? "Sample assignments ranked by deadlines, points, and estimated effort." :
+          demo && view === "grade-weight" ? "Sample assignments have no grading weights and are ordered by deadline." : activeView?.description
+      }</p>
       <Tabs.List aria-label="Assignment views" className="flex min-w-0 flex-wrap gap-2 border-b border-border/60 pb-3">
         {views.map(({ id, label }) => <Tabs.Tab key={id} value={id}
           ref={id === "focus" ? focusTab : undefined}
@@ -354,7 +360,7 @@ function CourseCheckmark() {
 }
 
 type AssignmentActions = {
-  onEstimate: (courseId: string, assignmentId: string, estimate: TimeEstimate, minutes: number | null) => void;
+  onEstimate: (courseId: string, assignmentId: string, minutes: number | null) => Promise<void>;
   onDismiss: (courseId: string, assignmentId: string) => void;
   onToggleFocus: (assignment: CourseAssignment, button: HTMLButtonElement) => void;
 };
@@ -391,6 +397,7 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
   const [effortAction, setEffortAction] = useState<"saving" | "removing" | null>(null);
   const [message, setMessage] = useState("");
   const { course, assignmentId } = assignment;
+  const sample = course.canvasUrl === null ? getDemoAssignment(course.courseId, assignmentId) : undefined;
   const deadline = assignmentDeadline(assignment);
   const availability = assignmentAvailability(assignment, now);
   const status = availability.startsWith("Closes") ? "" : availability;
@@ -410,9 +417,7 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
     setEffortAction(minutes === null ? "removing" : "saving");
     setMessage("");
     try {
-      const estimate = minutes === null ? await removeWorkloadMinutes(course.courseId, assignmentId)
-        : await saveWorkloadMinutes(course.courseId, assignmentId, minutes);
-      onEstimate(course.courseId, assignmentId, estimate, minutes);
+      await onEstimate(course.courseId, assignmentId, minutes);
       setMessage(minutes === null ? "Time report removed." : "Time report saved.");
     } catch (error) {
       setMessage(error instanceof WorkloadRequestError ? error.message : "Couldn’t update your time report. Try again.");
@@ -457,13 +462,14 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
         <div className="mb-2 flex flex-wrap items-center gap-2">
           {course.courseCode && <Badge variant="secondary" className="font-mono">{course.courseCode}</Badge>}
           {course.courseName !== course.courseCode && <span className="wrap-anywhere text-xs text-muted-foreground">{course.courseName}</span>}
+          {sample && <Badge variant="outline" className="capitalize">{sample.demoImportance} importance</Badge>}
         </div>
         <h3 className="text-base font-semibold tracking-tight">
-          <a className="inline-flex items-center gap-1.5 wrap-anywhere underline-offset-4 hover:underline"
+          {course.canvasUrl ? <a className="inline-flex items-center gap-1.5 wrap-anywhere underline-offset-4 hover:underline"
             target="_blank" rel="noreferrer" href={course.canvasUrl + "/assignments/" + encodeURIComponent(assignmentId)}>
             {assignment.assignmentName}
             <HugeiconsIcon icon={ArrowUpRight01Icon} aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-          </a>
+          </a> : assignment.assignmentName}
         </h3>
         {status && <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span>{status}</span>
@@ -474,8 +480,8 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs lg:grid-cols-4 lg:gap-x-6">
         <div><dt className="text-muted-foreground">Points possible</dt><dd className="mt-1 font-medium">{points}</dd></div>
-        <div><dt className="text-muted-foreground">Estimated effort</dt><dd className="mt-1 font-medium">{effort}</dd></div>
-        <div><dt className="text-muted-foreground">Grade weight</dt><dd className="mt-1 font-medium">{weight}</dd></div>
+        <div><dt className="text-muted-foreground">Estimated effort</dt><dd className="mt-1 font-medium">{effort}{sample?.type === "Major assessment" ? " (including preparation)" : ""}</dd></div>
+        <div><dt className="text-muted-foreground">{sample ? "Probable grade change" : "Grade weight"}</dt><dd className="mt-1 font-medium">{sample ? "2.4%" : weight}</dd></div>
         <div><dt className="text-muted-foreground">Deadline</dt>
           <dd className="mt-1 font-medium">{deadline.date ? <time dateTime={deadline.date}>{deadline.label} {formatWorkloadDate(deadline.date)}</time> : "No deadline"}</dd>
         </div>

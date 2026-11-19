@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   DashboardSquare01Icon,
   Analytics01Icon,
@@ -58,8 +58,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
   useEffect(() => {
     const savedTheme = getSavedTheme();
     const savedDark = getSavedDarkMode();
@@ -68,13 +66,30 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-      {/* Sidebar */}
+      <Suspense fallback={<Sidebar demo={false} />}><SidebarMode /></Suspense>
+      <main className="min-w-0 flex-1 h-screen overflow-y-auto bg-background text-foreground">
+        {children}
+      </main>
+    </div>
+  );
+}
+
+function SidebarMode() {
+  return <Sidebar demo={useSearchParams().get("demo") === "1"} />;
+}
+
+function Sidebar({ demo }: { demo: boolean }) {
+  const pathname = usePathname();
+  const activeItems = demo ? navItems.filter(({ name }) => name === "Courses" || name === "Assignments") : navItems;
+  const demoQuery = demo ? "?demo=1" : "";
+
+  return (
       <aside className="w-14 shrink-0 border-r border-border bg-card/60 backdrop-blur-md flex flex-col justify-between overflow-y-auto px-2 py-4 select-none md:w-[240px] md:p-5 lg:w-[280px]">
         <div className="flex flex-col gap-6">
           {/* Brand Header matching login screen */}
           <div className="flex items-center justify-between px-2 pt-1">
             <Link
-              href="/"
+              href={demo ? "/mocksite" : "/"}
               className="flex items-baseline gap-2.5 transition-opacity hover:opacity-85"
             >
               <span className="font-sans text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
@@ -93,7 +108,7 @@ export default function DashboardLayout({
             <p className="hidden md:block px-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1">
               Navigation
             </p>
-            {navItems.map((item) => {
+            {activeItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href === "/site/dashboard" && pathname === "/site");
@@ -101,7 +116,7 @@ export default function DashboardLayout({
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href + demoQuery}
                   aria-current={isActive ? "page" : undefined}
                   className={`group relative flex items-center justify-center md:justify-start gap-3 rounded-xl px-2 md:px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
                     isActive
@@ -133,7 +148,7 @@ export default function DashboardLayout({
         {/* Sidebar Footer */}
         <div className="flex flex-col gap-3 pt-4 border-t border-border/60">
           <Link
-            href="/site/settings"
+            href={"/site/settings" + demoQuery}
             className={`flex items-center justify-center md:justify-start gap-3 rounded-xl px-2 md:px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-muted/40 hover:text-foreground ${
               pathname === "/site/settings"
                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold"
@@ -149,7 +164,7 @@ export default function DashboardLayout({
           </Link>
 
           {/* Data Connection Status Pill */}
-          {pathname !== "/site/courses" && pathname !== "/site/assignments" && <div className="rounded-xl border border-border/80 bg-muted/20 p-2.5 hidden md:flex items-center justify-between">
+          {!demo && pathname !== "/site/courses" && pathname !== "/site/assignments" && <div className="rounded-xl border border-border/80 bg-muted/20 p-2.5 hidden md:flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -165,11 +180,5 @@ export default function DashboardLayout({
           </div>}
         </div>
       </aside>
-
-      {/* Main Content Area */}
-      <main className="min-w-0 flex-1 h-screen overflow-y-auto bg-background text-foreground">
-        {children}
-      </main>
-    </div>
   );
 }

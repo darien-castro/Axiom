@@ -1,51 +1,17 @@
-"use client"
-import * as React from "react"
-import { usePathname } from 'next/navigation';
-import Link from "next/link"
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu"
+import Link from "next/link";
+
+const links = [
+  { label: "Sandbox", href: "/mocksite" },
+  { label: "Courses", href: "/site/courses?demo=1" },
+  { label: "Assignments", href: "/site/assignments?demo=1" },
+  { label: "Settings", href: "/site/settings?demo=1" },
+];
 
 export default function NavMenu() {
- const pathname = usePathname();
-  return (
-    <NavigationMenu>
-      <NavigationMenuList>
-        <NavigationMenuItem>
-          <NavigationMenuTrigger>Home</NavigationMenuTrigger>
-        </NavigationMenuItem>
-        <NavigationMenuItem className="hidden md:flex">
-          <NavigationMenuTrigger>Courses</NavigationMenuTrigger>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuTrigger>Career Outlook</NavigationMenuTrigger>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-        <NavigationMenuTrigger>Settings</NavigationMenuTrigger>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-    </NavigationMenu>
-  )
-}
-
-function ListItem({
-  title,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
-  return (
-    <li {...props}>
-      <NavigationMenuLink render={<Link href={href}><div className="flex flex-col gap-1 text-sm">
-          <div className="leading-none font-medium">{title}</div>
-          <div className="line-clamp-2 text-muted-foreground">{children}</div>
-        </div></Link>} />
-    </li>
-  )
+  return <nav aria-label="Axiom demo" className="flex flex-wrap justify-center gap-1">
+    {links.map(({ label, href }) => <Link key={href} href={href}
+      className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+      {label}
+    </Link>)}
+  </nav>;
 }
