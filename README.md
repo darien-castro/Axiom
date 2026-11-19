@@ -5,8 +5,6 @@ Axiom connects to Canvas LMS and helps students decide which assignments matter 
 - **Assignment priority:** deadline urgency, points possible, and estimated effort, with a personalized **For you** view.
 - **Projected GPA:** estimated semester and cumulative GPA from current grades and remaining coursework weight.
 
-> **Status:** prototype. Live assignment ranking is available in the Assignments tab. See [Status](#status).
-
 ## Stack
 
 | Layer | Tech |
@@ -30,11 +28,9 @@ Docs: [Overview](docs/README.md) · [Backend](docs/backend/README.md) · [Fronte
 - **Mock client:** `MockCanvasClient` provides seeded student data so you can demo without a Canvas token.
 - **Encrypted storage:** Canvas tokens and identifiers are stored encrypted (AES-256-GCM, random IV per record). Database lookups use deterministic HMAC-SHA256 hashes so raw identifiers are never indexed.
 
-### Assignment ranking
+### Assignment Weights & Ranking
 
-The base ranking combines deadline urgency (65%), Canvas points possible (30%), and estimated effort (5%). Axiom uses the due date or, when it’s missing, the Canvas lock date. Longer assignments get a head start based on the median time reported by students.
-
-**For you** adds a boost for assignments with more grade impact in courses where your current grade is lower. The **Due / lock date**, **Grade weight**, and **Duration** views each sort by their named field. [Ranking implementation](apps/web/lib/assignment-ranking.ts)
+The base ranking is a score that combines deadline urgency (65%), Canvas points possible (30%), and estimated effort (5%). Axiom uses the due date or, when it’s missing, the Canvas lock date. Longer assignments get a head start based on the median time reported by students. The **For you** tab prioritizes the assignments with more grade impact in courses where your current grade is lower.
 
 **Chronological** shows the full semester in deadline order, including completed and closed assignments. Use **Add to Focus** to save individual assignments to **My Focus List**.
 
