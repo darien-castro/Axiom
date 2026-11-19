@@ -27,10 +27,14 @@ app.get('/healthz', (_req: Request, res: Response) => {
   res.json({ ok: true, status: 'healthy' });
 });
 
-// ideally, once released, would only allow access from one server
+const frontendOrigin = 'http://localhost:3001';
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? frontendOrigin
+  : [frontendOrigin, 'http://localhost:3000'];
+
 app.use(
   cors({
-    origin: 'http://localhost:3001',
+    origin: allowedOrigins,
     credentials: true,
   })
 );
