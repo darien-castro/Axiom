@@ -135,7 +135,7 @@ Base URL `http://localhost:5000`. All `/api` routes are `POST` with a JSON body.
 | `/api/verify` | `apiKey` | Validates token, records user |
 | `/api/me` | `apiKey` | User profile |
 | `/api/courses` | `apiKey` | Enrolled courses |
-| `/api/course` | `apiKey`, `courseID` | One course |7301~rrLNtRKHrnt7KvuF3mUThmutzcvfQcWPaAumnTtxe7vCxkQywCu42AeATVNkFk8L
+| `/api/course` | `apiKey`, `courseID` | One course |
 | `/api/assignments` | `apiKey`, `courseID` | Course assignments |
 | `/api/assignment` | `apiKey`, `courseID`, `assignmentID` | One assignment |
 | `/api/submissions` | `apiKey`, `courseID` | Submission states and scores |
