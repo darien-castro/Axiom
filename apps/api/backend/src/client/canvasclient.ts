@@ -37,6 +37,9 @@ export interface CanvasAssignment {
   name: string;
   description?: string;
   due_at?: string | null;
+  unlock_at?: string | null;
+  lock_at?: string | null;
+  locked_for_user?: boolean;
   points_possible?: number | null;
   grading_type?: string;
   [key: string]: unknown;
@@ -52,6 +55,12 @@ export interface CanvasSubmission {
   submitted_at?: string | null;
   workflow_state?: string;
   [key: string]: unknown;
+}
+
+export class CanvasRequestError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+  }
 }
 
 export class CanvasClient {
@@ -83,22 +92,20 @@ export class CanvasClient {
   }
   async GetRequest<T = any>(apiCall: string): Promise<T> {
     const endpoint = `${this.m_baseURL}${apiCall.startsWith('/') ? '' : '/'}${apiCall}`;
-    try {
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${this.m_apiKey}`,
-        },
-      });
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => 'No error body');
-        throw new Error(`Response Error Status: ${response.status} (${response.statusText}), at ${apiCall}: ${errorBody}`);
-      }
-      const result = (await response.json()) as T;
-      return result;
-    } catch (error) {
-      throw error;
+    const response = await this.request(endpoint, this.m_apiKey);
+    return (await response.json()) as T;
+  }
+
+  private async request(endpoint: string, apiKey: string): Promise<Response> {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => 'No error body');
+      throw new CanvasRequestError(response.status, `Response Error Status: ${response.status} (${response.statusText}), at ${endpoint}: ${errorBody}`);
     }
+    return response;
   }
 
   async GetCourses(): Promise<CanvasCourse[]> {
@@ -129,8 +136,25 @@ export class CanvasClient {
   }
 
   async GetCourseAssignments(courseID: string | number): Promise<CanvasAssignment[]> {
-    const apiEndpoint = `/api/v1/courses/${courseID}/assignments?per_page=100`; // testing
-    return this.GetRequest<CanvasAssignment[]>(apiEndpoint);
+    const apiKey = this.m_apiKey;
+    const canvasOrigin = new URL(this.m_baseURL).origin;
+    const assignments: CanvasAssignment[] = [];
+    const visited = new Set<string>();
+    let nextPage: string | undefined = `${this.m_baseURL}/api/v1/courses/${encodeURIComponent(courseID)}/assignments?per_page=100`;
+
+    while (nextPage) {
+      const page = new URL(nextPage);
+      if (page.origin !== canvasOrigin || visited.has(page.href)) {
+        throw new Error('Invalid Canvas assignment pagination link');
+      }
+      visited.add(page.href);
+      const response = await this.request(page.href, apiKey);
+      const results = (await response.json()) as CanvasAssignment[];
+      assignments.push(...results);
+      nextPage = response.headers.get('link')?.match(/(?:^|,)\s*<([^>]+)>\s*;\s*rel="next"/i)?.[1];
+    }
+
+    return assignments;
   }
 
   async GetCourseAssignment(courseID: string | number, assignmentID: string | number): Promise<CanvasAssignment> {

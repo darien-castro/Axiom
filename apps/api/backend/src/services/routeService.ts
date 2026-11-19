@@ -29,7 +29,8 @@ export type {
   UserInfo,
 };
 
-const canvasClientInstance = new CanvasClient('https://instructure.charlotte.edu');
+const canvasBaseUrl = 'https://instructure.charlotte.edu';
+const canvasClientInstance = new CanvasClient(canvasBaseUrl);
 
 export async function ensureUser(apiKey: string): Promise<boolean> {
   try {
@@ -246,6 +247,21 @@ export async function userRequestedAssignmentsRoute(
   }
 }
 
+export async function userRequestedAssignmentAvailability(apiKey: string, courseID: string) {
+  // Canvas applies overrides for this student. Each request uses its own client
+  // and reads directly from Canvas so offsets and extensions stay user-specific.
+  const canvas = new CanvasClient(canvasBaseUrl, apiKey);
+  const assignments = await canvas.GetCourseAssignments(courseID);
+  return assignments.map((assignment) => ({
+    assignmentId: String(assignment.id),
+    assignmentName: assignment.name,
+    availableFrom: assignment.unlock_at ?? null,
+    dueAt: assignment.due_at ?? null,
+    availableUntil: assignment.lock_at ?? null,
+    lockedForUser: assignment.locked_for_user ?? null,
+  }));
+}
+
 export async function userRequestedAssignmentRoute(
   apiKey: string,
   courseID: string,
@@ -416,6 +432,7 @@ export default {
   userRequestedCoursesRoute,
   userRequestedCourseRoute,
   userRequestedAssignmentsRoute,
+  userRequestedAssignmentAvailability,
   userRequestedAssignmentRoute,
   userRequestedSubmissionsRoute,
   userRequestedDashboardRoute,

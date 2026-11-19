@@ -2,6 +2,7 @@
 // /api/courses/:courseID/assignments
 
 import { Router } from 'express';
+import { CanvasRequestError } from '../client/canvasclient';
 import routeService, { CleanCourseAssignment } from '../services/routeService';
 import authenticateSession from '../middleware/auth';
 
@@ -26,5 +27,24 @@ const handleAssignments = async (_req: any, res: any) => {
 
 router.get('/courses/:courseID/assignments', handleAssignments);
 router.post('/courses/:courseID/assignments', handleAssignments);
+
+router.get('/courses/:courseID/assignments/availability', async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (typeof req.apiKey !== 'string' || !req.apiKey.trim()) {
+    res.status(401).json({ error: 'A valid session or Canvas API key is required' });
+    return;
+  }
+
+  try {
+    const assignments = await routeService.userRequestedAssignmentAvailability(req.apiKey, req.params.courseID);
+    res.json({ assignments });
+  } catch (error) {
+    if (error instanceof CanvasRequestError && [401, 403, 404].includes(error.status)) {
+      res.status(error.status).json({ error: 'Canvas denied access to the course or it could not be found' });
+      return;
+    }
+    res.status(502).json({ error: 'Failed to retrieve assignment availability from Canvas' });
+  }
+});
 
 export default router;

@@ -56,6 +56,33 @@ All backend routes are mounted under the `/api` prefix on port `5000`.
 
 ---
 
+### `GET /api/courses/:courseID/assignments/availability`
+- **Description**: Retrieves the student's effective assignment availability dates for a course, including any extensions. Dates Canvas leaves unset are `null`.
+- **Authentication**: Signed-in session cookie (`credentials: "include"` in the web app) or `X-API-Key` header.
+- **Response**: `200 OK`
+  ```json
+  {
+    "assignments": [
+      {
+        "assignmentId": "101",
+        "assignmentName": "Lab report",
+        "availableFrom": "2026-11-19T15:00:00Z",
+        "dueAt": "2026-11-20T23:00:00Z",
+        "availableUntil": "2026-11-23T23:00:00Z",
+        "lockedForUser": false
+      }
+    ]
+  }
+  ```
+  `lockedForUser` is `null` if Canvas omits the lock status.
+- **Responses**:
+  - `401 Unauthorized`: Missing or invalid authentication.
+  - `403 Forbidden`: Canvas denies access to the course.
+  - `404 Not Found`: Canvas cannot find the course.
+  - `502 Bad Gateway`: The Canvas request fails.
+
+---
+
 ### `POST /api/submissions`
 - **Description**: Retrieves student assignment submissions and scores for a course.
 - **Request Body**:
