@@ -24,6 +24,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Dialog } from "@base-ui/react/dialog";
+import CourseVisibilitySettings from "./course-visibility-settings";
 
 import {
   Card,
@@ -97,6 +98,7 @@ export default function SettingsPage() {
   const [newApiKey, setNewApiKey] = useState<string>("");
   const [keyUpdateStatus, setKeyUpdateStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [keyUpdateMessage, setKeyUpdateMessage] = useState<string>("");
+  const [courseSessionRevision, setCourseSessionRevision] = useState(0);
 
   // Modals state
   const [isApiKeyGuideOpen, setIsApiKeyGuideOpen] = useState<boolean>(false);
@@ -155,6 +157,7 @@ export default function SettingsPage() {
         setKeyUpdateStatus("success");
         setKeyUpdateMessage("Canvas API Key verified and session updated!");
         setNewApiKey("");
+        setCourseSessionRevision((current) => current + 1);
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("storage"));
         }
@@ -290,6 +293,8 @@ export default function SettingsPage() {
           </button>
         </div>
       )}
+
+      <CourseVisibilitySettings key={courseSessionRevision} />
 
       {/* 2x2 Settings Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">

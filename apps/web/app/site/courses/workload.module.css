@@ -1,0 +1,186 @@
+.page {
+  margin-inline: auto;
+  max-width: 102rem;
+  padding: clamp(1rem, 4vw, 3.5rem);
+  color: var(--foreground);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.header h1 { font-size: clamp(2rem, 4vw, 3.15rem); font-weight: 650; letter-spacing: -.06em; line-height: 1.12; }
+.header p { margin-top: .55rem; color: var(--muted-foreground); font-size: .95rem; }
+.stable { --signal: #31955e; --tint: #91d8ad; }
+.busy { --signal: #b97417; --tint: #f6cd73; }
+.overloaded { --signal: #dc6259; --tint: #f5a096; }
+.unknown { --signal: var(--muted-foreground); --tint: var(--border); }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .7rem 1rem;
+  padding: .55rem .8rem;
+  border: 1px solid var(--border);
+  border-radius: .7rem;
+  background: var(--card);
+  font-size: .73rem;
+}
+
+.legend li { display: flex; align-items: center; gap: .4rem; }
+.legend li span { width: .55rem; height: .55rem; border-radius: 50%; background: var(--signal); }
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: .75rem;
+  margin-bottom: 1.15rem;
+}
+
+.totals > div { padding: .8rem 1rem; background: var(--card); border: 1px solid var(--border); border-radius: .85rem; }
+.totals dt, .courseMetrics dt { font-size: .73rem; color: var(--muted-foreground); font-weight: 550; }
+.totals dd { margin: .22rem 0; font-size: clamp(1.2rem, 3vw, 1.55rem); font-weight: 620; line-height: 1.2; letter-spacing: -.04em; }
+.totals small, .courseMetrics small { display: block; color: var(--muted-foreground); font-size: .72rem; }
+
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (min-width: 72rem) {
+  .workspace { grid-template-columns: minmax(0, 1.75fr) minmax(17rem, 1fr); }
+}
+
+.map, .detail, .notice {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: 0 2px 5px rgb(0 0 0 / .035), 0 14px 35px rgb(0 0 0 / .035);
+  min-width: 0;
+}
+
+.map {
+  container-type: inline-size;
+  padding: clamp(1rem, 2.4vw, 1.65rem);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--border) 30%, transparent) 1px, transparent 1px),
+                    linear-gradient(to bottom, color-mix(in srgb, var(--border) 30%, transparent) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+}
+
+.map h2 { font-size: .85rem; font-weight: 650; }
+.map header p { margin-top: .25rem; font-size: .8rem; color: var(--muted-foreground); }
+
+.bubbles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+  gap: clamp(.6rem, 1.4vw, 1.25rem);
+  min-height: 28rem;
+  padding-block: 1.7rem .7rem;
+}
+
+.bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  position: relative;
+  overflow-wrap: anywhere;
+  width: min(var(--bubble-size), max(6.6rem, calc(var(--bubble-ratio) * 46cqw)), 100%);
+  aspect-ratio: 1;
+  padding: .8rem;
+  border: 1px solid color-mix(in srgb, var(--signal) 55%, var(--border));
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, var(--card) 5%, color-mix(in srgb, var(--tint) 28%, var(--card)) 100%);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--signal) 12%, transparent);
+  cursor: pointer;
+  transition: box-shadow 150ms, transform 150ms;
+}
+
+.bubble[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--signal), 0 18px 32px color-mix(in srgb, var(--signal) 23%, transparent);
+  transform: scale(1.035);
+  z-index: 1;
+}
+
+.bubble:hover { box-shadow: 0 0 0 2px var(--signal), 0 18px 32px color-mix(in srgb, var(--signal) 24%, transparent); }
+.bubble:focus-visible { outline: 3px solid var(--ring); outline-offset: 5px; }
+.deadlineChip { border-radius: 99px; background: color-mix(in srgb, var(--tint) 26%, var(--card)); padding: .22rem .55rem; font-size: .68rem; font-weight: 620; }
+.code { color: var(--muted-foreground); font-size: .72rem; letter-spacing: .075em; font-weight: 620; }
+.bubbleName { max-width: 85%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-weight: 650; line-height: 1.18; font-size: clamp(.86rem, 1.52vw, 1.22rem); letter-spacing: -.02em; }
+.bubbleGrade { font-size: .9rem; font-weight: 630; }
+.bubbleGrade:empty { display: none; }
+
+@container (min-width: 32rem) {
+  .bubble { width: min(var(--bubble-size), calc(var(--bubble-ratio) * 31cqw)); }
+}
+
+@container (max-width: 25rem) {
+  .bubble { gap: .3rem; padding: .5rem; }
+  .bubbleGrade { display: none; }
+  .bubbleName { font-size: .83rem; max-width: 95%; }
+}
+
+.detail { border-color: color-mix(in srgb, var(--signal) 24%, var(--border)); scroll-margin-top: 1rem; }
+.detailHeader { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding: 1.15rem; border-bottom: 1px solid var(--border); }
+.detailHeader h2 { margin: .2rem 0; font-size: 1.27rem; font-weight: 650; letter-spacing: -.035em; line-height: 1.2; overflow-wrap: anywhere; }
+.muted { color: var(--muted-foreground); font-size: .76rem; }
+.grade { flex-shrink: 0; display: grid; text-align: right; gap: .1rem; }
+.grade strong { font-size: 1.3rem; }
+.grade small { color: var(--muted-foreground); font-size: .71rem; }
+.detailBody { display: grid; gap: .9rem; padding: 1rem; }
+
+.canvasLink, .action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  border-radius: .55rem;
+  border: 1px solid color-mix(in srgb, #31955e 35%, var(--border));
+  color: var(--foreground);
+  background: color-mix(in srgb, #91d8ad 15%, var(--card));
+  padding: .56rem .8rem;
+  font-size: .79rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action:disabled { cursor: wait; opacity: .65; }
+.canvasLink:hover, .action:hover { background: color-mix(in srgb, #91d8ad 25%, var(--card)); }
+.pressure { padding: .75rem .85rem; background: color-mix(in srgb, var(--tint) 18%, var(--card)); border: 1px solid color-mix(in srgb, var(--signal) 37%, var(--border)); border-radius: .65rem; }
+.pressure strong { font-size: .83rem; }
+.pressure p, .upcoming > p, .creditEditor > p { color: var(--muted-foreground); font-size: .78rem; margin-top: .22rem; }
+.courseMetrics { display: grid; grid-template-columns: 1fr 1.2fr; border: 1px solid var(--border); border-radius: .65rem; }
+.courseMetrics > div { padding: .65rem .72rem; }
+.courseMetrics > div + div { border-left: 1px solid var(--border); }
+.courseMetrics dd { font-weight: 650; font-size: .96rem; margin-block: .15rem; }
+
+.creditEditor summary, .textLink { font-size: .76rem; font-weight: 620; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.creditEditor form { display: flex; align-items: end; gap: .5rem; flex-wrap: wrap; margin-top: .55rem; }
+.creditEditor label { display: grid; gap: .25rem; font-size: .75rem; }
+.creditEditor input { width: 7rem; padding: .38rem .5rem; border-radius: .4rem; border: 1px solid var(--border); background: var(--background); }
+.upcoming { border: 1px solid var(--border); border-radius: .65rem; }
+.upcoming h3 { font-size: .83rem; font-weight: 650; padding: .75rem .8rem; }
+.upcoming > p { margin: 0; padding: .1rem .8rem .65rem; }
+.upcoming li { display: grid; gap: .17rem; padding: .6rem .8rem; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.upcoming li strong { font-size: .82rem; }
+.upcoming li span, .upcoming li small { color: var(--muted-foreground); font-size: .72rem; }
+.allAssignments { display: flex; align-items: center; justify-content: space-between; gap: .5rem; border-top: 1px solid var(--border); padding: .64rem .8rem; font-size: .79rem; font-weight: 620; }
+.allAssignments:hover { background: var(--muted); }
+.notice { padding: 1.4rem; }
+.notice h2 { font-weight: 650; }
+.notice p { color: var(--muted-foreground); margin-top: .35rem; }
+.notice .action { margin-top: .8rem; }
+
+@media (max-width: 35rem) {
+  .bubbles { gap: .8rem; min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble { transition: none; }
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import AssignmentFocusCard from "@/components/custom/focus/AssignmentFocusCard";
@@ -11,11 +12,23 @@ import { Separator } from "@/components/ui/separator";
 import { focusDemoAssignments } from "@/lib/focus-demo-data";
 import { assignmentKey, type DemoImportance, type FocusAssignment } from "@/lib/focus-types";
 import { readFocusIds, writeFocusIds } from "@/lib/focus-list";
+import CourseAssignments from "./course-assignments";
 
 const importanceOrder: Record<DemoImportance, number> = { high: 0, medium: 1, low: 2 };
 const validFocusIds = new Set(focusDemoAssignments.map(assignmentKey));
 
 export default function AssignmentsPage() {
+  return <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading assignments…</p>}>
+    <AssignmentView />
+  </Suspense>;
+}
+
+function AssignmentView() {
+  const courseId = useSearchParams().get("course");
+  return courseId ? <CourseAssignments key={courseId} courseId={courseId} /> : <FocusAssignments />;
+}
+
+function FocusAssignments() {
   const [tab, setTab] = useState<"all" | "focus">("all");
   const [sort, setSort] = useState("due");
   const [importance, setImportance] = useState("all");

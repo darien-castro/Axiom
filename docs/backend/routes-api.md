@@ -69,17 +69,29 @@ All backend routes are mounted under the `/api` prefix on port `5000`.
         "availableFrom": "2026-11-19T15:00:00Z",
         "dueAt": "2026-11-20T23:00:00Z",
         "availableUntil": "2026-11-23T23:00:00Z",
-        "lockedForUser": false
+        "lockedForUser": false,
+        "outstanding": true,
+        "estimatedMinutes": 75,
+        "reportCount": 3
       }
     ]
   }
   ```
-  `lockedForUser` is `null` if Canvas omits the lock status.
+  `lockedForUser` is `null` if Canvas omits the lock status. `outstanding` uses the current student's Canvas submission state. The time estimate is the median of saved reports and is `null` when none exist.
 - **Responses**:
   - `401 Unauthorized`: Missing or invalid authentication.
   - `403 Forbidden`: Canvas denies access to the course.
   - `404 Not Found`: Canvas cannot find the course.
   - `502 Bad Gateway`: The Canvas request fails.
+
+---
+
+### Course workload
+
+- `GET /api/workload/courses` returns active Canvas courses and grades, alongside the signed-in student’s saved credit hours and `hidden` flag for each course.
+- `PUT /api/workload/courses/:courseID/visibility` accepts `{"hidden": true}` to hide the course or `{"hidden": false}` to show it. This preference applies to the workload map.
+- `PUT /api/workload/courses/:courseID/credits` accepts `{"creditHours": 3}` and saves that student's credit hours for the course.
+- `PUT /api/workload/courses/:courseID/assignments/:assignmentID/time` accepts `{"minutes": 75}`. Saving again replaces the student's previous report and returns the updated estimate and report count.
 
 ---
 

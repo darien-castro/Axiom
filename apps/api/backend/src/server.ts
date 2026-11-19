@@ -18,6 +18,7 @@ import assignmentRoute from './routes/assignment';
 import submissionsRoute from './routes/submissions';
 import selfRoute from './routes/me';
 import dashboardRoute from './routes/dashboard';
+import courseWorkloadRoute from './routes/courseWorkload';
 
 db.initAllTables();
 
@@ -50,6 +51,7 @@ app.get('/', (req, res) => {
 
 app.use(express.json());
 app.use('/api', verifyRoute);
+app.use('/api', courseWorkloadRoute);
 app.use('/api', coursesRoute);
 app.use('/api', courseRoute);
 app.use('/api', assignmentsRoute);

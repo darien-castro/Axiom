@@ -1,6 +1,7 @@
 // api route helpers
 import {
   CanvasClient,
+  canvasBaseUrl,
   Canvas_API,
   CanvasCourse,
   CanvasAssignment,
@@ -29,7 +30,6 @@ export type {
   UserInfo,
 };
 
-const canvasBaseUrl = 'https://instructure.charlotte.edu';
 const canvasClientInstance = new CanvasClient(canvasBaseUrl);
 
 export async function ensureUser(apiKey: string): Promise<boolean> {
@@ -251,7 +251,8 @@ export async function userRequestedAssignmentAvailability(apiKey: string, course
   // Canvas applies overrides for this student. Each request uses its own client
   // and reads directly from Canvas so offsets and extensions stay user-specific.
   const canvas = new CanvasClient(canvasBaseUrl, apiKey);
-  const assignments = await canvas.GetCourseAssignments(courseID);
+  const assignments = await canvas.GetCourseAssignments(courseID, true);
+  const estimates = new Map((await db.getAssignmentTimeEstimates(courseID)).map((estimate) => [estimate.assignmentId, estimate]));
   return assignments.map((assignment) => ({
     assignmentId: String(assignment.id),
     assignmentName: assignment.name,
@@ -259,7 +260,18 @@ export async function userRequestedAssignmentAvailability(apiKey: string, course
     dueAt: assignment.due_at ?? null,
     availableUntil: assignment.lock_at ?? null,
     lockedForUser: assignment.locked_for_user ?? null,
+    outstanding: isAssignmentOutstanding(assignment),
+    estimatedMinutes: estimates.get(String(assignment.id))?.estimatedMinutes ?? null,
+    reportCount: estimates.get(String(assignment.id))?.reportCount ?? 0,
   }));
+}
+
+function isAssignmentOutstanding(assignment: CanvasAssignment): boolean {
+  const submission = assignment.submission;
+  if (!submission) return true;
+  if (submission.excused) return false;
+  if (submission.missing || submission.redo_request) return true;
+  return !submission.submitted_at && !['submitted', 'graded', 'pending_review'].includes(submission.workflow_state ?? '');
 }
 
 export async function userRequestedAssignmentRoute(

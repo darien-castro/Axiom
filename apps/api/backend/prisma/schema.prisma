@@ -10,6 +10,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model CourseCreditHours {
+  studentKey  Bytes  @map("student_key")
+  courseId    String @map("course_id")
+  creditHours Float  @map("credit_hours")
+
+  @@id([studentKey, courseId])
+  @@map("course_credit_hours")
+}
+
+model HiddenCourse {
+  studentKey Bytes  @map("student_key")
+  courseId   String @map("course_id")
+
+  @@id([studentKey, courseId])
+  @@map("hidden_courses")
+}
+
+model AssignmentTimeReport {
+  courseId     String @map("course_id")
+  assignmentId String @map("assignment_id")
+  studentKey   Bytes  @map("student_key")
+  minutes      Int
+
+  @@id([courseId, assignmentId, studentKey])
+  @@map("assignment_time_reports")
+}
+
 /// Users table: stores student identifier hashed with HMAC-SHA256
 model User {
   /// Deterministic HMAC-SHA256 hash of the Canvas user ID

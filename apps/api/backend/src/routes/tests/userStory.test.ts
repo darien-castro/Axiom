@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import db from '../../services/databaseService';
 import prisma from '../../services/db';
 import crypto from '../../crypto/crypto';
@@ -106,4 +107,35 @@ test('Error Handling: invalid inputs, missing records, and invalid sessions', as
   // 7. Querying last sync for non-existent user returns null
   const lastUpdate = await db.lastUpdated('non_existent_user_9999');
   expect(lastUpdate).toBeNull();
+});
+
+test('keeps course preferences private and computes the median from one time report per student', async () => {
+  const courseId = randomUUID();
+  const studentA = randomUUID();
+  const studentB = randomUUID();
+  await db.createWorkloadTables();
+
+  try {
+    await db.saveCourseCreditHours(studentA, courseId, 3.5);
+    expect(await db.getCourseCreditHours(studentA)).toEqual([{ courseId, creditHours: 3.5 }]);
+    expect(await db.getCourseCreditHours(studentB)).toEqual([]);
+
+    await db.saveCourseVisibility(studentA, courseId, true);
+    await db.saveCourseVisibility(studentA, courseId, true);
+    expect(await db.getHiddenCourses(studentA)).toEqual([{ courseId }]);
+    expect(await db.getHiddenCourses(studentB)).toEqual([]);
+    await db.saveCourseVisibility(studentA, courseId, false);
+    expect(await db.getHiddenCourses(studentA)).toEqual([]);
+
+    await db.saveAssignmentTimeReport(studentA, courseId, 'lab', 35);
+    await db.saveAssignmentTimeReport(studentB, courseId, 'lab', 90);
+    await db.saveAssignmentTimeReport(studentA, courseId, 'lab', 61);
+    expect(await db.getAssignmentTimeEstimates(courseId)).toEqual([
+      { assignmentId: 'lab', estimatedMinutes: 75.5, reportCount: 2 },
+    ]);
+  } finally {
+    await prisma.$executeRaw`DELETE FROM assignment_time_reports WHERE course_id = ${courseId}`;
+    await prisma.$executeRaw`DELETE FROM course_credit_hours WHERE course_id = ${courseId}`;
+    await prisma.$executeRaw`DELETE FROM hidden_courses WHERE course_id = ${courseId}`;
+  }
 });

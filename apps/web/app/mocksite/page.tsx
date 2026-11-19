@@ -23,7 +23,7 @@ const MOCK_ASSIGNMENTS = [
   { classID: "GEOG 1105", description: "Map Identification", affect: "Affect 5%", time: "40 Minutes", badgeText: "Medium", badgeVariant: "default" as const },
   { classID: "COMP 3181", description: "Midterm Exam", affect: "Affect 25%", time: "2 Hours", badgeText: "Heavy", badgeVariant: "destructive" as const },
   { classID: "PHYS 2101", description: "Lab Report 1", affect: "Affect 8%", time: "3 Hours", badgeText: "Medium", badgeVariant: "default" as const },
-];
+] as const;
 
 export default function Page() {
   return (

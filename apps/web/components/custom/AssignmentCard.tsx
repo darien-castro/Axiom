@@ -19,7 +19,7 @@ export interface AssignmentCardMembers {
   badgeText: string
   badgeVariant?: "default" | "destructive" | "outline" | "secondary"
   className?: string
-  duedate: string
+  duedate?: string
 }
 
 export default function AssignmentCard({classID, description, affect, time, badgeText, badgeVariant, className, duedate, ...props }: AssignmentCardMembers) {

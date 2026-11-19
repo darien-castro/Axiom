@@ -9,7 +9,6 @@ interface Course {
   name: string
   credits: number
   gradeLow: boolean
-  assignments: []
 }
 // etc...
 interface Assignment{

@@ -23,6 +23,12 @@ export interface GradeInfo {
   grade: string;
 }
 
+export interface AssignmentTimeEstimate {
+  assignmentId: string;
+  estimatedMinutes: number;
+  reportCount: number;
+}
+
 function userKey(userID: string): Uint8Array<ArrayBuffer> {
   const buf = crypto.hmacLookup(userID);
   const ab = new ArrayBuffer(buf.byteLength);
@@ -160,6 +166,75 @@ export class DatabaseService {
       )`);
   }
 
+  async createWorkloadTables(): Promise<void> {
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS course_credit_hours (
+        student_key BYTEA NOT NULL,
+        course_id TEXT NOT NULL,
+        credit_hours DOUBLE PRECISION NOT NULL CHECK (credit_hours >= 0),
+        PRIMARY KEY (student_key, course_id)
+      )`;
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS hidden_courses (
+        student_key BYTEA NOT NULL,
+        course_id TEXT NOT NULL,
+        PRIMARY KEY (student_key, course_id)
+      )`;
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS assignment_time_reports (
+        course_id TEXT NOT NULL,
+        assignment_id TEXT NOT NULL,
+        student_key BYTEA NOT NULL,
+        minutes INTEGER NOT NULL CHECK (minutes > 0),
+        PRIMARY KEY (course_id, assignment_id, student_key)
+      )`;
+  }
+
+  async getCourseCreditHours(userID: string) {
+    return prisma.$queryRaw<{ courseId: string; creditHours: number }[]>`
+      SELECT course_id AS "courseId", credit_hours AS "creditHours"
+      FROM course_credit_hours WHERE student_key = ${userKey(userID)}`;
+  }
+
+  async saveCourseCreditHours(userID: string, courseID: string, creditHours: number) {
+    await prisma.$executeRaw`
+      INSERT INTO course_credit_hours (student_key, course_id, credit_hours)
+      VALUES (${userKey(userID)}, ${courseID}, ${creditHours})
+      ON CONFLICT (student_key, course_id) DO UPDATE SET credit_hours = EXCLUDED.credit_hours`;
+  }
+
+  async getHiddenCourses(userID: string) {
+    return prisma.$queryRaw<{ courseId: string }[]>`
+      SELECT course_id AS "courseId" FROM hidden_courses WHERE student_key = ${userKey(userID)}`;
+  }
+
+  async saveCourseVisibility(userID: string, courseID: string, hidden: boolean) {
+    const studentKey = userKey(userID);
+    if (hidden) {
+      await prisma.$executeRaw`
+        INSERT INTO hidden_courses (student_key, course_id) VALUES (${studentKey}, ${courseID})
+        ON CONFLICT (student_key, course_id) DO NOTHING`;
+    } else {
+      await prisma.$executeRaw`DELETE FROM hidden_courses WHERE student_key = ${studentKey} AND course_id = ${courseID}`;
+    }
+  }
+
+  async getAssignmentTimeEstimates(courseID: string) {
+    return prisma.$queryRaw<AssignmentTimeEstimate[]>`
+      SELECT assignment_id AS "assignmentId",
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY minutes) AS "estimatedMinutes",
+        COUNT(*)::int AS "reportCount"
+      FROM assignment_time_reports WHERE course_id = ${courseID}
+      GROUP BY assignment_id`;
+  }
+
+  async saveAssignmentTimeReport(userID: string, courseID: string, assignmentID: string, minutes: number) {
+    await prisma.$executeRaw`
+      INSERT INTO assignment_time_reports (course_id, assignment_id, student_key, minutes)
+      VALUES (${courseID}, ${assignmentID}, ${userKey(userID)}, ${minutes}::integer)
+      ON CONFLICT (course_id, assignment_id, student_key) DO UPDATE SET minutes = EXCLUDED.minutes`;
+  }
+
   async initAllTables(): Promise<void> {
     console.log('Connecting to database via Prisma and initializing schema...');
     try {
@@ -173,6 +248,7 @@ export class DatabaseService {
       await this.createSubmissionTable();
       await this.createUpdateTable();
       await this.createSessionTable();
+      await this.createWorkloadTables();
       console.log('All tables verified and initialized successfully!');
     } catch (error) {
       console.error('Error initializing tables via Prisma:', error);

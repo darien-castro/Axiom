@@ -1,0 +1,104 @@
+import { Router, type Request, type RequestHandler, type Response } from 'express';
+import { CanvasClient, CanvasRequestError, canvasBaseUrl, type CanvasCourse } from '../client/canvasclient';
+import authenticateSession from '../middleware/auth';
+import { cleanCourses } from '../mapper/mapper';
+import db from '../services/databaseService';
+
+const router = Router();
+
+type StudentWorkload = { canvas: CanvasClient; studentId: string; courses: CanvasCourse[] };
+type CourseParams = { courseID: string };
+type AssignmentParams = CourseParams & { assignmentID: string };
+
+function studentRoute<Params extends Partial<CourseParams>>(
+  handler: (req: Request<Params>, res: Response, student: StudentWorkload) => Promise<void>,
+): RequestHandler<Params> {
+  return async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    if (typeof req.apiKey !== 'string' || !req.apiKey.trim()) {
+      res.status(401).json({ error: 'Sign in with Canvas to view course work.' });
+      return;
+    }
+
+    try {
+      const canvas = new CanvasClient(canvasBaseUrl, req.apiKey);
+      const [profile, courses] = await Promise.all([canvas.GetUserInformation(), canvas.GetActiveStudentCourses()]);
+      if (req.params.courseID && !courses.some((course) => String(course.id) === req.params.courseID)) {
+        res.status(404).json({ error: 'This course is not in your active Canvas enrollments.' });
+        return;
+      }
+      await handler(req, res, { canvas, studentId: String(profile.id), courses });
+    } catch (error) {
+      const status = error instanceof CanvasRequestError ? error.status : 500;
+      if (status === 401 || status === 403 || status === 404) {
+        res.status(status).json({ error: 'Canvas did not give access to this data.' });
+      } else {
+        res.status(error instanceof CanvasRequestError ? 502 : 500).json({ error: 'Could not load or save course workload.' });
+      }
+    }
+  };
+}
+
+router.get('/workload/courses', authenticateSession, studentRoute(async (_req, res, { studentId, courses }) => {
+  const [creditRows, hiddenRows] = await Promise.all([db.getCourseCreditHours(studentId), db.getHiddenCourses(studentId)]);
+  const credits = new Map(creditRows.map((course) => [course.courseId, course.creditHours]));
+  const hidden = new Set(hiddenRows.map((course) => course.courseId));
+  res.json({ courses: courses.map((course) => {
+    const courseId = String(course.id);
+    const [clean] = cleanCourses([course]);
+    const student = course.enrollments?.find((enrollment) => enrollment.type === 'student' || enrollment.type === 'StudentEnrollment');
+    return {
+      courseId,
+      courseName: clean?.courseName || course.name || course.course_code || `Course ${courseId}`,
+      courseCode: clean ? `${clean.courseDepartment} ${clean.courseCode}` : course.course_code ?? null,
+      term: course.term?.name ?? clean?.courseTerm ?? null,
+      gradeScore: student?.computed_current_score ?? null,
+      gradeLetter: student?.computed_current_grade ?? null,
+      creditHours: credits.get(courseId) ?? null,
+      hidden: hidden.has(courseId),
+      canvasUrl: `${canvasBaseUrl}/courses/${encodeURIComponent(courseId)}`,
+    };
+  }) });
+}));
+
+router.put('/workload/courses/:courseID/visibility', authenticateSession, studentRoute<CourseParams>(async (req, res, { studentId }) => {
+  const hidden = req.body?.hidden;
+  if (typeof hidden !== 'boolean') {
+    res.status(400).json({ error: 'Choose whether to hide this course.' });
+    return;
+  }
+
+  await db.saveCourseVisibility(studentId, req.params.courseID, hidden);
+  res.json({ hidden });
+}));
+
+router.put('/workload/courses/:courseID/credits', authenticateSession, studentRoute<CourseParams>(async (req, res, { studentId }) => {
+  const creditHours = req.body?.creditHours;
+  if (typeof creditHours !== 'number' || !Number.isFinite(creditHours) || creditHours < 0) {
+    res.status(400).json({ error: 'Enter a nonnegative number of credit hours.' });
+    return;
+  }
+
+  await db.saveCourseCreditHours(studentId, req.params.courseID, creditHours);
+  res.json({ creditHours });
+}));
+
+router.put('/workload/courses/:courseID/assignments/:assignmentID/time', authenticateSession, studentRoute<AssignmentParams>(async (req, res, { canvas, studentId }) => {
+  const minutes = req.body?.minutes;
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 2_147_483_647) {
+    res.status(400).json({ error: 'Enter a positive whole number of minutes.' });
+    return;
+  }
+
+  const { courseID, assignmentID } = req.params;
+  const assignment = await canvas.GetCourseAssignment(courseID, assignmentID);
+  if (String(assignment.id) !== assignmentID) {
+    res.status(404).json({ error: 'This assignment could not be found in Canvas.' });
+    return;
+  }
+  await db.saveAssignmentTimeReport(studentId, courseID, assignmentID, minutes);
+  const estimate = (await db.getAssignmentTimeEstimates(courseID)).find((entry) => entry.assignmentId === assignmentID);
+  res.json({ estimatedMinutes: estimate?.estimatedMinutes ?? null, reportCount: estimate?.reportCount ?? 0 });
+}));
+
+export default router;

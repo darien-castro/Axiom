@@ -1,3 +1,5 @@
+export const canvasBaseUrl = 'https://instructure.charlotte.edu';
+
 export interface CanvasUser {
   id: number | string;
   name: string;
@@ -40,6 +42,7 @@ export interface CanvasAssignment {
   unlock_at?: string | null;
   lock_at?: string | null;
   locked_for_user?: boolean;
+  submission?: CanvasSubmission | null;
   points_possible?: number | null;
   grading_type?: string;
   [key: string]: unknown;
@@ -54,6 +57,9 @@ export interface CanvasSubmission {
   grade?: string | null;
   submitted_at?: string | null;
   workflow_state?: string;
+  excused?: boolean;
+  missing?: boolean;
+  redo_request?: boolean;
   [key: string]: unknown;
 }
 
@@ -113,6 +119,10 @@ export class CanvasClient {
     return this.GetRequest<CanvasCourse[]>(apiEndpoint);
   }
 
+  async GetActiveStudentCourses(): Promise<CanvasCourse[]> {
+    return this.getAllPages<CanvasCourse>('/api/v1/courses?enrollment_state=active&enrollment_type=student&include[]=total_scores&include[]=term&per_page=100');
+  }
+
   async GetUserInformation(): Promise<CanvasUser> {
     const apiEndpoint = '/api/v1/users/self';
     return this.GetRequest<CanvasUser>(apiEndpoint);
@@ -135,30 +145,34 @@ export class CanvasClient {
     return this.GetRequest<CanvasCourse>(apiEndpoint);
   }
 
-  async GetCourseAssignments(courseID: string | number): Promise<CanvasAssignment[]> {
+  async GetCourseAssignments(courseID: string | number, includeSubmission = false): Promise<CanvasAssignment[]> {
+    const submission = includeSubmission ? '&include[]=submission' : '';
+    return this.getAllPages<CanvasAssignment>(`/api/v1/courses/${encodeURIComponent(courseID)}/assignments?per_page=100${submission}`);
+  }
+
+  private async getAllPages<T>(path: string): Promise<T[]> {
     const apiKey = this.m_apiKey;
     const canvasOrigin = new URL(this.m_baseURL).origin;
-    const assignments: CanvasAssignment[] = [];
+    const items: T[] = [];
     const visited = new Set<string>();
-    let nextPage: string | undefined = `${this.m_baseURL}/api/v1/courses/${encodeURIComponent(courseID)}/assignments?per_page=100`;
+    let nextPage: string | undefined = `${this.m_baseURL}${path}`;
 
     while (nextPage) {
       const page = new URL(nextPage);
       if (page.origin !== canvasOrigin || visited.has(page.href)) {
-        throw new Error('Invalid Canvas assignment pagination link');
+        throw new Error('Invalid Canvas pagination link');
       }
       visited.add(page.href);
       const response = await this.request(page.href, apiKey);
-      const results = (await response.json()) as CanvasAssignment[];
-      assignments.push(...results);
+      items.push(...(await response.json() as T[]));
       nextPage = response.headers.get('link')?.match(/(?:^|,)\s*<([^>]+)>\s*;\s*rel="next"/i)?.[1];
     }
 
-    return assignments;
+    return items;
   }
 
   async GetCourseAssignment(courseID: string | number, assignmentID: string | number): Promise<CanvasAssignment> {
-    const apiEndpoint = `/api/v1/courses/${courseID}/assignments/${assignmentID}`;
+    const apiEndpoint = `/api/v1/courses/${encodeURIComponent(courseID)}/assignments/${encodeURIComponent(assignmentID)}`;
     return this.GetRequest<CanvasAssignment>(apiEndpoint);
   }
 
