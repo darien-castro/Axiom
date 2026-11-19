@@ -14,6 +14,9 @@ export interface CanvasCourse {
   course_code?: string;
   account_id?: number;
   enrollment_term_id?: number;
+  apply_assignment_group_weights?: boolean;
+  grading_periods?: unknown[] | null;
+  hide_final_grades?: boolean;
   start_at?: string;
   end_at?: string;
   term?: {
@@ -30,6 +33,7 @@ export interface CanvasEnrollment {
   enrollment_state?: string;
   computed_current_score?: number | null;
   computed_current_grade?: string | null;
+  multiple_grading_periods_enabled?: boolean;
   [key: string]: unknown;
 }
 
@@ -44,8 +48,16 @@ export interface CanvasAssignment {
   locked_for_user?: boolean;
   submission?: CanvasSubmission | null;
   points_possible?: number | null;
+  assignment_group_id?: number | string;
+  omit_from_final_grade?: boolean;
   grading_type?: string;
   [key: string]: unknown;
+}
+
+export interface CanvasAssignmentGroup {
+  id: number | string;
+  group_weight?: number | null;
+  rules?: { drop_lowest?: number; drop_highest?: number } | null;
 }
 
 export interface CanvasSubmission {
@@ -57,7 +69,9 @@ export interface CanvasSubmission {
   grade?: string | null;
   submitted_at?: string | null;
   workflow_state?: string;
+  posted_at?: string | null;
   excused?: boolean;
+  assignment_visible?: boolean;
   missing?: boolean;
   redo_request?: boolean;
   [key: string]: unknown;
@@ -129,7 +143,7 @@ export class CanvasClient {
   }
 
   async GetCourseData(courseID: string | number): Promise<CanvasCourse> {
-    const apiEndpoint = `/api/v1/courses/${courseID}?include[]=total_scores`;
+    const apiEndpoint = `/api/v1/courses/${encodeURIComponent(courseID)}?include[]=total_scores`;
     return this.GetRequest<CanvasCourse>(apiEndpoint);
   }
 
@@ -148,6 +162,10 @@ export class CanvasClient {
   async GetCourseAssignments(courseID: string | number, includeSubmission = false): Promise<CanvasAssignment[]> {
     const submission = includeSubmission ? '&include[]=submission' : '';
     return this.getAllPages<CanvasAssignment>(`/api/v1/courses/${encodeURIComponent(courseID)}/assignments?per_page=100${submission}`);
+  }
+
+  async GetCourseAssignmentGroups(courseID: string | number): Promise<CanvasAssignmentGroup[]> {
+    return this.getAllPages<CanvasAssignmentGroup>(`/api/v1/courses/${encodeURIComponent(courseID)}/assignment_groups?per_page=100`);
   }
 
   private async getAllPages<T>(path: string): Promise<T[]> {

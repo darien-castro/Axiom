@@ -133,9 +133,26 @@ test('keeps course preferences private and computes the median from one time rep
     expect(await db.getAssignmentTimeEstimates(courseId)).toEqual([
       { assignmentId: 'lab', estimatedMinutes: 75.5, reportCount: 2 },
     ]);
+    expect(await db.getStudentTimeReports(studentA)).toEqual([{ courseId, assignmentId: 'lab', minutes: 61 }]);
+    await db.removeAssignmentTimeReport(studentA, courseId, 'lab');
+    expect(await db.getStudentTimeReports(studentA)).toEqual([]);
+    expect(await db.getAssignmentTimeEstimates(courseId)).toEqual([{ assignmentId: 'lab', estimatedMinutes: 90, reportCount: 1 }]);
+    await db.removeAssignmentTimeReport(studentB, courseId, 'lab');
+    expect(await db.getAssignmentTimeEstimates(courseId)).toEqual([]);
+
+    const dismissed = { courseId, assignmentId: 'lab', courseName: 'Test course', assignmentName: 'Lab' };
+    await db.dismissAssignment(studentA, dismissed);
+    await db.dismissAssignment(studentA, dismissed);
+    expect(await db.getDismissedAssignments(studentA)).toEqual([dismissed]);
+    expect(await db.getDismissedAssignments(studentB)).toEqual([]);
+    await db.restoreAssignment(studentB, courseId, 'lab');
+    expect(await db.getDismissedAssignments(studentA)).toEqual([dismissed]);
+    await db.restoreAssignment(studentA, courseId, 'lab');
+    expect(await db.getDismissedAssignments(studentA)).toEqual([]);
   } finally {
     await prisma.$executeRaw`DELETE FROM assignment_time_reports WHERE course_id = ${courseId}`;
     await prisma.$executeRaw`DELETE FROM course_credit_hours WHERE course_id = ${courseId}`;
     await prisma.$executeRaw`DELETE FROM hidden_courses WHERE course_id = ${courseId}`;
+    await prisma.$executeRaw`DELETE FROM dismissed_assignments WHERE course_id = ${courseId}`;
   }
 });

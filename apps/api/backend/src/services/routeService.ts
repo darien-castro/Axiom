@@ -9,6 +9,7 @@ import {
   CanvasEnrollment,
 } from '../client/canvasclient';
 import db, { CourseInfo, GradeInfo, UserInfo } from './databaseService';
+import { calculateGradeImpact } from './assignmentGradeImpact';
 import mapper, {
   CleanCourse,
   CleanCourseAssignment,
@@ -247,12 +248,17 @@ export async function userRequestedAssignmentsRoute(
   }
 }
 
-export async function userRequestedAssignmentAvailability(apiKey: string, courseID: string) {
+export async function userRequestedAssignmentAvailability(apiKey: string, courseID: string, includeGradeImpact = false) {
   // Canvas applies overrides for this student. Each request uses its own client
   // and reads directly from Canvas so offsets and extensions stay user-specific.
   const canvas = new CanvasClient(canvasBaseUrl, apiKey);
-  const assignments = await canvas.GetCourseAssignments(courseID, true);
-  const estimates = new Map((await db.getAssignmentTimeEstimates(courseID)).map((estimate) => [estimate.assignmentId, estimate]));
+  const [assignments, timeEstimates, gradeMetadata] = await Promise.all([
+    canvas.GetCourseAssignments(courseID, true),
+    db.getAssignmentTimeEstimates(courseID),
+    includeGradeImpact ? Promise.all([canvas.GetCourseData(courseID), canvas.GetCourseAssignmentGroups(courseID)]).catch(() => null) : null,
+  ]);
+  const estimates = new Map(timeEstimates.map((estimate) => [estimate.assignmentId, estimate]));
+  const gradeImpact = gradeMetadata ? calculateGradeImpact(...gradeMetadata, assignments) : null;
   return assignments.map((assignment) => ({
     assignmentId: String(assignment.id),
     assignmentName: assignment.name,
@@ -263,7 +269,21 @@ export async function userRequestedAssignmentAvailability(apiKey: string, course
     outstanding: isAssignmentOutstanding(assignment),
     estimatedMinutes: estimates.get(String(assignment.id))?.estimatedMinutes ?? null,
     reportCount: estimates.get(String(assignment.id))?.reportCount ?? 0,
+    ...(includeGradeImpact ? {
+      pointsPossible: assignment.points_possible ?? null,
+      gradeImpactPercent: gradeImpact?.get(String(assignment.id)) ?? null,
+      submissionGrade: getVisibleSubmissionGrade(assignment.submission),
+    } : {}),
   }));
+}
+
+function getVisibleSubmissionGrade(submission: CanvasSubmission | null | undefined) {
+  if (submission?.workflow_state !== 'graded' || submission.excused ||
+      submission.assignment_visible === false || submission.posted_at === null) return null;
+
+  const label = submission.grade?.trim() || null;
+  const score = typeof submission.score === 'number' && Number.isFinite(submission.score) ? submission.score : null;
+  return label !== null || score !== null ? { label, score } : null;
 }
 
 function isAssignmentOutstanding(assignment: CanvasAssignment): boolean {

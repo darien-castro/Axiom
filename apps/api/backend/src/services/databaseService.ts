@@ -29,6 +29,13 @@ export interface AssignmentTimeEstimate {
   reportCount: number;
 }
 
+export interface DismissedAssignment {
+  courseId: string;
+  assignmentId: string;
+  courseName: string;
+  assignmentName: string;
+}
+
 function userKey(userID: string): Uint8Array<ArrayBuffer> {
   const buf = crypto.hmacLookup(userID);
   const ab = new ArrayBuffer(buf.byteLength);
@@ -181,6 +188,16 @@ export class DatabaseService {
         PRIMARY KEY (student_key, course_id)
       )`;
     await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS dismissed_assignments (
+        student_key BYTEA NOT NULL,
+        course_id TEXT NOT NULL,
+        assignment_id TEXT NOT NULL,
+        course_name TEXT NOT NULL,
+        assignment_name TEXT NOT NULL,
+        dismissed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (student_key, course_id, assignment_id)
+      )`;
+    await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS assignment_time_reports (
         course_id TEXT NOT NULL,
         assignment_id TEXT NOT NULL,
@@ -228,11 +245,46 @@ export class DatabaseService {
       GROUP BY assignment_id`;
   }
 
+  async getDismissedAssignments(userID: string) {
+    return prisma.$queryRaw<DismissedAssignment[]>`
+      SELECT course_id AS "courseId", assignment_id AS "assignmentId",
+        course_name AS "courseName", assignment_name AS "assignmentName"
+      FROM dismissed_assignments WHERE student_key = ${userKey(userID)}
+      ORDER BY dismissed_at DESC, course_id, assignment_id`;
+  }
+
+  async dismissAssignment(userID: string, assignment: DismissedAssignment) {
+    const { courseId, assignmentId, courseName, assignmentName } = assignment;
+    await prisma.$executeRaw`
+      INSERT INTO dismissed_assignments (student_key, course_id, assignment_id, course_name, assignment_name)
+      VALUES (${userKey(userID)}, ${courseId}, ${assignmentId}, ${courseName}, ${assignmentName})
+      ON CONFLICT (student_key, course_id, assignment_id) DO UPDATE
+      SET course_name = EXCLUDED.course_name, assignment_name = EXCLUDED.assignment_name`;
+  }
+
+  async restoreAssignment(userID: string, courseId: string, assignmentId: string) {
+    await prisma.$executeRaw`
+      DELETE FROM dismissed_assignments
+      WHERE student_key = ${userKey(userID)} AND course_id = ${courseId} AND assignment_id = ${assignmentId}`;
+  }
+
   async saveAssignmentTimeReport(userID: string, courseID: string, assignmentID: string, minutes: number) {
     await prisma.$executeRaw`
       INSERT INTO assignment_time_reports (course_id, assignment_id, student_key, minutes)
       VALUES (${courseID}, ${assignmentID}, ${userKey(userID)}, ${minutes}::integer)
       ON CONFLICT (course_id, assignment_id, student_key) DO UPDATE SET minutes = EXCLUDED.minutes`;
+  }
+
+  async getStudentTimeReports(userID: string) {
+    return prisma.$queryRaw<{ courseId: string; assignmentId: string; minutes: number }[]>`
+      SELECT course_id AS "courseId", assignment_id AS "assignmentId", minutes
+      FROM assignment_time_reports WHERE student_key = ${userKey(userID)}`;
+  }
+
+  async removeAssignmentTimeReport(userID: string, courseId: string, assignmentId: string) {
+    await prisma.$executeRaw`
+      DELETE FROM assignment_time_reports
+      WHERE student_key = ${userKey(userID)} AND course_id = ${courseId} AND assignment_id = ${assignmentId}`;
   }
 
   async initAllTables(): Promise<void> {

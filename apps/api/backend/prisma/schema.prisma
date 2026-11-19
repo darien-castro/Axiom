@@ -27,6 +27,18 @@ model HiddenCourse {
   @@map("hidden_courses")
 }
 
+model DismissedAssignment {
+  studentKey     Bytes    @map("student_key")
+  courseId       String   @map("course_id")
+  assignmentId   String   @map("assignment_id")
+  courseName     String   @map("course_name")
+  assignmentName String   @map("assignment_name")
+  dismissedAt    DateTime @default(now()) @map("dismissed_at") @db.Timestamptz(6)
+
+  @@id([studentKey, courseId, assignmentId])
+  @@map("dismissed_assignments")
+}
+
 model AssignmentTimeReport {
   courseId     String @map("course_id")
   assignmentId String @map("assignment_id")

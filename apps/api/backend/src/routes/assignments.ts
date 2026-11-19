@@ -36,7 +36,7 @@ router.get('/courses/:courseID/assignments/availability', async (req, res) => {
   }
 
   try {
-    const assignments = await routeService.userRequestedAssignmentAvailability(req.apiKey, req.params.courseID);
+    const assignments = await routeService.userRequestedAssignmentAvailability(req.apiKey, req.params.courseID, req.query.gradeImpact === 'true');
     res.json({ assignments });
   } catch (error) {
     if (error instanceof CanvasRequestError && [401, 403, 404].includes(error.status)) {

@@ -2,10 +2,10 @@
 
 Axiom connects to Canvas LMS and helps students decide which assignments matter most for their grades. It is designed to compute:
 
-- **Assignment priority:** urgency × grade weight.
+- **Assignment priority:** deadline urgency, points possible, and estimated effort, with a personalized **For you** view.
 - **Projected GPA:** estimated semester and cumulative GPA from current grades and remaining coursework weight.
 
-> **Status:** prototype. The dashboard currently uses static data and priority ranking is not yet automated. See [Status](#status).
+> **Status:** prototype. Live assignment ranking is available in the Assignments tab. See [Status](#status).
 
 ## Stack
 
@@ -30,6 +30,12 @@ Docs: [Overview](docs/README.md) · [Backend](docs/backend/README.md) · [Fronte
 - **Mock client:** `MockCanvasClient` provides seeded student data so you can demo without a Canvas token.
 - **Encrypted storage:** Canvas tokens and identifiers are stored encrypted (AES-256-GCM, random IV per record). Database lookups use deterministic HMAC-SHA256 hashes so raw identifiers are never indexed.
 
+### Assignment ranking
+
+The base ranking combines deadline urgency (65%), Canvas points possible (30%), and estimated effort (5%). Axiom uses the due date or, when it’s missing, the Canvas lock date. Longer assignments get a head start based on the median time reported by students.
+
+**For you** adds a boost for assignments with more grade impact in courses where your current grade is lower. The **Due / lock date**, **Grade weight**, and **Effort** views each sort by their named field. [Ranking implementation](apps/web/lib/assignment-ranking.ts)
+
 ## Status
 
 **Done**
@@ -38,11 +44,11 @@ Docs: [Overview](docs/README.md) · [Backend](docs/backend/README.md) · [Fronte
 - Crypto layer, Canvas client, mock client
 - Auth landing page with token validation
 - `/mocksite` sandbox: assignment cards, workload chart, physics graph
-- `/site/dashboard` UI prototype (static data)
+- `/site/dashboard` displays Canvas courses and grades
+- `/site/assignments` ranks live Canvas assignments and filters them by course
 
 **Roadmap**
-- Connect dashboard to `POST /api/dashboard`
-- Automated weight × urgency ranking from Canvas assignment groups
+- Use the Assignments ranking on the dashboard
 - HTTP-only session cookies / JWT instead of sending the token in every request
 
 ## Known limitations

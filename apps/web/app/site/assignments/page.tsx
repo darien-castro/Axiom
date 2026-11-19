@@ -24,8 +24,8 @@ export default function AssignmentsPage() {
 }
 
 function AssignmentView() {
-  const courseId = useSearchParams().get("course");
-  return courseId ? <CourseAssignments key={courseId} courseId={courseId} /> : <FocusAssignments />;
+  const demo = useSearchParams().get("demo") === "1";
+  return demo ? <FocusAssignments /> : <CourseAssignments />;
 }
 
 function FocusAssignments() {

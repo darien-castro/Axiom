@@ -27,6 +27,29 @@ export interface WorkloadAssignment extends TimeEstimate {
   outstanding: boolean;
 }
 
+export interface RankableAssignment extends WorkloadAssignment {
+  pointsPossible: number | null;
+  gradeImpactPercent: number | null;
+  submissionGrade: { label: string | null; score: number | null } | null;
+}
+
+export interface DismissedAssignment {
+  courseId: string;
+  assignmentId: string;
+  courseName: string;
+  assignmentName: string;
+}
+
+export interface PersonalTimeReport {
+  courseId: string;
+  assignmentId: string;
+  minutes: number;
+}
+
+export function assignmentIdentity(courseId: string, assignmentId: string) {
+  return JSON.stringify([courseId, assignmentId]);
+}
+
 export class WorkloadRequestError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -46,8 +69,18 @@ export function getWorkloadCourses(signal: AbortSignal) {
   return request<{ courses: WorkloadCourse[] }>("/workload/courses", { signal });
 }
 
+export function getAssignmentWorkspace(signal: AbortSignal) {
+  return request<{ courses: WorkloadCourse[]; dismissedAssignments: DismissedAssignment[]; timeReports: PersonalTimeReport[] }>(
+    "/workload/courses?includeAssignmentPreferences=true", { signal },
+  );
+}
+
 export function getWorkloadAssignments(courseId: string, signal: AbortSignal) {
   return request<{ assignments: WorkloadAssignment[] }>(`/courses/${encodeURIComponent(courseId)}/assignments/availability`, { signal });
+}
+
+export function getRankableAssignments(courseId: string, signal: AbortSignal) {
+  return request<{ assignments: RankableAssignment[] }>(`/courses/${encodeURIComponent(courseId)}/assignments/availability?gradeImpact=true`, { signal });
 }
 
 function put<T>(path: string, body: object) {
@@ -64,8 +97,16 @@ export function saveCourseVisibility(courseId: string, hidden: boolean) {
   return put<{ hidden: boolean }>(`/workload/courses/${encodeURIComponent(courseId)}/visibility`, { hidden });
 }
 
+export function saveAssignmentDismissal(courseId: string, assignmentId: string, dismissed: boolean) {
+  return put<{ dismissedAssignment: DismissedAssignment | null }>("/workload/assignments/dismissal", { courseId, assignmentId, dismissed });
+}
+
 export function saveWorkloadMinutes(courseId: string, assignmentId: string, minutes: number) {
   return put<TimeEstimate>(`/workload/courses/${encodeURIComponent(courseId)}/assignments/${encodeURIComponent(assignmentId)}/time`, { minutes });
+}
+
+export function removeWorkloadMinutes(courseId: string, assignmentId: string) {
+  return request<TimeEstimate>(`/workload/courses/${encodeURIComponent(courseId)}/assignments/${encodeURIComponent(assignmentId)}/time`, { method: "DELETE" });
 }
 
 export function dueTime(assignment: WorkloadAssignment): number {

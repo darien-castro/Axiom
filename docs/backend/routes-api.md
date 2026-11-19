@@ -78,6 +78,7 @@ All backend routes are mounted under the `/api` prefix on port `5000`.
   }
   ```
   `lockedForUser` is `null` if Canvas omits the lock status. `outstanding` uses the current student's Canvas submission state. The time estimate is the median of saved reports and is `null` when none exist.
+- **Optional query**: `?gradeImpact=true` also returns `pointsPossible`, `gradeImpactPercent`, and the student's visible `submissionGrade` (`label` and `score`, or `null`). The impact percentage estimates the assignment's share of the final course grade and is `null` when Canvas data or grading rules prevent a reliable estimate.
 - **Responses**:
   - `401 Unauthorized`: Missing or invalid authentication.
   - `403 Forbidden`: Canvas denies access to the course.
@@ -89,9 +90,12 @@ All backend routes are mounted under the `/api` prefix on port `5000`.
 ### Course workload
 
 - `GET /api/workload/courses` returns active Canvas courses and grades, alongside the signed-in student’s saved credit hours and `hidden` flag for each course.
+- Add `?includeAssignmentPreferences=true` to include the signed-in student's `dismissedAssignments` and personal `timeReports`.
+- `PUT /api/workload/assignments/dismissal` accepts `courseId`, `assignmentId`, and a boolean `dismissed`. It returns the saved entry as `dismissedAssignment`, or `null` after a restore. Restore also works after a course becomes inactive.
 - `PUT /api/workload/courses/:courseID/visibility` accepts `{"hidden": true}` to hide the course or `{"hidden": false}` to show it. This preference applies to the workload map.
 - `PUT /api/workload/courses/:courseID/credits` accepts `{"creditHours": 3}` and saves that student's credit hours for the course.
 - `PUT /api/workload/courses/:courseID/assignments/:assignmentID/time` accepts `{"minutes": 75}`. Saving again replaces the student's previous report and returns the updated estimate and report count.
+- `DELETE /api/workload/courses/:courseID/assignments/:assignmentID/time` removes the signed-in student's report and returns the updated estimate and report count.
 
 ---
 

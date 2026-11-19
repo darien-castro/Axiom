@@ -39,11 +39,17 @@ function studentRoute<Params extends Partial<CourseParams>>(
   };
 }
 
-router.get('/workload/courses', authenticateSession, studentRoute(async (_req, res, { studentId, courses }) => {
-  const [creditRows, hiddenRows] = await Promise.all([db.getCourseCreditHours(studentId), db.getHiddenCourses(studentId)]);
+router.get('/workload/courses', authenticateSession, studentRoute(async (req, res, { studentId, courses }) => {
+  const includeAssignmentPreferences = req.query.includeAssignmentPreferences === 'true';
+  const [creditRows, hiddenRows, dismissedAssignments, timeReports] = await Promise.all([
+    db.getCourseCreditHours(studentId),
+    db.getHiddenCourses(studentId),
+    includeAssignmentPreferences ? db.getDismissedAssignments(studentId) : undefined,
+    includeAssignmentPreferences ? db.getStudentTimeReports(studentId) : undefined,
+  ]);
   const credits = new Map(creditRows.map((course) => [course.courseId, course.creditHours]));
   const hidden = new Set(hiddenRows.map((course) => course.courseId));
-  res.json({ courses: courses.map((course) => {
+  res.json({ dismissedAssignments, timeReports, courses: courses.map((course) => {
     const courseId = String(course.id);
     const [clean] = cleanCourses([course]);
     const student = course.enrollments?.find((enrollment) => enrollment.type === 'student' || enrollment.type === 'StudentEnrollment');
@@ -59,6 +65,39 @@ router.get('/workload/courses', authenticateSession, studentRoute(async (_req, r
       canvasUrl: `${canvasBaseUrl}/courses/${encodeURIComponent(courseId)}`,
     };
   }) });
+}));
+
+router.put('/workload/assignments/dismissal', authenticateSession, studentRoute(async (req, res, { canvas, studentId, courses }) => {
+  const { courseId, assignmentId, dismissed } = req.body ?? {};
+  if (typeof courseId !== 'string' || !courseId || typeof assignmentId !== 'string' || !assignmentId || typeof dismissed !== 'boolean') {
+    res.status(400).json({ error: 'An assignment, course, and dismissal state are required.' });
+    return;
+  }
+
+  if (!dismissed) {
+    await db.restoreAssignment(studentId, courseId, assignmentId);
+    res.json({ dismissedAssignment: null });
+    return;
+  }
+
+  const course = courses.find(({ id }) => String(id) === courseId);
+  if (!course) {
+    res.status(404).json({ error: 'This course is not in your active Canvas enrollments.' });
+    return;
+  }
+
+  const assignment = await canvas.GetCourseAssignment(courseId, assignmentId);
+  if (String(assignment.id) !== assignmentId) {
+    res.status(404).json({ error: 'This assignment could not be found in Canvas.' });
+    return;
+  }
+  const dismissedAssignment = {
+    courseId, assignmentId,
+    courseName: cleanCourses([course])[0]?.courseName || course.name,
+    assignmentName: assignment.name,
+  };
+  await db.dismissAssignment(studentId, dismissedAssignment);
+  res.json({ dismissedAssignment });
 }));
 
 router.put('/workload/courses/:courseID/visibility', authenticateSession, studentRoute<CourseParams>(async (req, res, { studentId }) => {
@@ -97,8 +136,18 @@ router.put('/workload/courses/:courseID/assignments/:assignmentID/time', authent
     return;
   }
   await db.saveAssignmentTimeReport(studentId, courseID, assignmentID, minutes);
-  const estimate = (await db.getAssignmentTimeEstimates(courseID)).find((entry) => entry.assignmentId === assignmentID);
-  res.json({ estimatedMinutes: estimate?.estimatedMinutes ?? null, reportCount: estimate?.reportCount ?? 0 });
+  res.json(await timeEstimate(courseID, assignmentID));
 }));
+
+router.delete('/workload/courses/:courseID/assignments/:assignmentID/time', authenticateSession, studentRoute<AssignmentParams>(async (req, res, { studentId }) => {
+  const { courseID, assignmentID } = req.params;
+  await db.removeAssignmentTimeReport(studentId, courseID, assignmentID);
+  res.json(await timeEstimate(courseID, assignmentID));
+}));
+
+async function timeEstimate(courseID: string, assignmentID: string) {
+  const estimate = (await db.getAssignmentTimeEstimates(courseID)).find((entry) => entry.assignmentId === assignmentID);
+  return { estimatedMinutes: estimate?.estimatedMinutes ?? null, reportCount: estimate?.reportCount ?? 0 };
+}
 
 export default router;

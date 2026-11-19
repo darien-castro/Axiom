@@ -13,6 +13,11 @@ const workloadDb = vi.hoisted(() => ({
   saveAssignmentTimeReport: vi.fn(),
   saveCourseVisibility: vi.fn(),
   getHiddenCourses: vi.fn(),
+  getDismissedAssignments: vi.fn(),
+  dismissAssignment: vi.fn(),
+  restoreAssignment: vi.fn(),
+  getStudentTimeReports: vi.fn(),
+  removeAssignmentTimeReport: vi.fn(),
 }));
 vi.mock('../../services/databaseService', () => ({
   default: {
@@ -48,6 +53,8 @@ beforeEach(() => {
   canvasFetch.mockReset();
   vi.clearAllMocks();
   workloadDb.getHiddenCourses.mockResolvedValue([]);
+  workloadDb.getDismissedAssignments.mockResolvedValue([]);
+  workloadDb.getStudentTimeReports.mockResolvedValue([]);
   vi.stubGlobal('fetch', canvasFetch);
 });
 
@@ -78,6 +85,64 @@ test('requires authentication before calling Canvas', async () => {
   const response = await getAvailability();
   expect(response.status).toBe(401);
   expect(canvasFetch).not.toHaveBeenCalled();
+});
+
+test('returns student-visible graded submissions, including zero, in the ranked response', async () => {
+  const submissions = [
+    { workflow_state: 'graded', grade: '18', score: 18, posted_at: '2026-11-19T14:00:00Z' },
+    { workflow_state: 'graded', grade: null, score: 0 },
+    { workflow_state: 'graded', grade: '16', score: 16, excused: true },
+    { workflow_state: 'graded', grade: '19', score: 19, posted_at: null },
+    { workflow_state: 'graded', grade: '19', score: 19, assignment_visible: false },
+    { workflow_state: 'submitted', grade: '17', score: 17 },
+  ];
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/courses/42?include[]=total_scores`) return Response.json({ apply_assignment_group_weights: false });
+    if (url === `${canvasUrl}/courses/42/assignment_groups?per_page=100`) return Response.json([]);
+    expect(url).toBe(firstPage);
+    return Response.json(submissions.map((submission, id) => ({ id, name: `Assignment ${id}`, points_possible: 20, submission })));
+  });
+
+  const response = await localFetch(`${apiUrl}/courses/42/assignments/availability?gradeImpact=true`, { headers: { 'X-API-Key': 'student-a' } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ assignments: [
+    { submissionGrade: { label: '18', score: 18 } },
+    { submissionGrade: { label: null, score: 0 } },
+    { submissionGrade: null },
+    { submissionGrade: null },
+    { submissionGrade: null },
+    { submissionGrade: null },
+  ] });
+});
+
+test.each([
+  { weighted: false, dropLowest: 0, expected: 25 },
+  { weighted: true, dropLowest: 0, expected: 7.5 },
+  { weighted: true, dropLowest: 1, expected: null },
+])('returns estimated grade weight only for supported calculation rules ($weighted, $dropLowest)', async ({ weighted, dropLowest, expected }) => {
+  canvasFetch.mockImplementation(async (url, options) => {
+    expect(new Headers(options?.headers).get('Authorization')).toBe('Bearer student-a');
+    if (url === `${canvasUrl}/courses/42?include[]=total_scores`) return Response.json({ apply_assignment_group_weights: weighted });
+    if (url === `${canvasUrl}/courses/42/assignment_groups?per_page=100`) {
+      return Response.json([{ id: 2, group_weight: 30, rules: { drop_lowest: dropLowest } }]);
+    }
+    expect(url).toBe(firstPage);
+    return Response.json([
+      { id: 7, name: 'Lab', assignment_group_id: 2, points_possible: 50 },
+      { id: 8, name: 'Completed project', assignment_group_id: 2, points_possible: 150, submission: { workflow_state: 'graded' } },
+      { id: 9, name: 'Practice', assignment_group_id: 2, points_possible: 100, omit_from_final_grade: true },
+      { id: 10, name: 'Excused lab', assignment_group_id: 2, points_possible: 25, submission: { excused: true } },
+    ]);
+  });
+
+  const response = await localFetch(`${apiUrl}/courses/42/assignments/availability?gradeImpact=true`, { headers: { 'X-API-Key': 'student-a' } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ assignments: [
+    { assignmentId: '7', pointsPossible: 50, gradeImpactPercent: expected, estimatedMinutes: 75 },
+    { assignmentId: '8', outstanding: false },
+    { assignmentId: '9', gradeImpactPercent: null },
+    { assignmentId: '10', gradeImpactPercent: null },
+  ] });
 });
 
 test('returns all pages with separate effective dates for each signed-in student', async () => {
@@ -195,4 +260,44 @@ test('returns active Canvas courses and restricts workload writes to the student
 
   expect(await (await put('42/visibility', { hidden: false })).json()).toEqual({ hidden: false });
   expect(workloadDb.saveCourseVisibility).toHaveBeenCalledWith('100', '42', false);
+});
+
+test('scopes assignment dismissals and effort report removal to the signed-in student', async () => {
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/users/self`) return Response.json({ id: 100 });
+    if (url === `${canvasUrl}/courses/42/assignments/7`) return Response.json({ id: 7, name: 'Lab report' });
+    expect(String(url)).toContain('enrollment_state=active&enrollment_type=student');
+    return Response.json([{ id: 42, name: 'Database Design' }]);
+  });
+  const cookie = await signIn('student-a');
+  const dismissedAssignment = { courseId: '42', assignmentId: '7', courseName: 'Database Design', assignmentName: 'Lab report' };
+  const dismiss = (courseId: string, dismissed: boolean) => localFetch(`${apiUrl}/workload/assignments/dismissal`, {
+    method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ courseId, assignmentId: '7', dismissed }),
+  });
+
+  expect((await dismiss('99', true)).status).toBe(404);
+  expect(workloadDb.dismissAssignment).not.toHaveBeenCalled();
+  const saved = await dismiss('42', true);
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toEqual({ dismissedAssignment });
+  expect(workloadDb.dismissAssignment).toHaveBeenCalledWith('100', dismissedAssignment);
+
+  workloadDb.getDismissedAssignments.mockResolvedValueOnce([dismissedAssignment]);
+  const report = { courseId: '42', assignmentId: '7', minutes: 60 };
+  workloadDb.getStudentTimeReports.mockResolvedValueOnce([report]);
+  const workspace = await localFetch(`${apiUrl}/workload/courses?includeAssignmentPreferences=true`, { headers: { Cookie: cookie } });
+  expect(await workspace.json()).toMatchObject({ dismissedAssignments: [dismissedAssignment], timeReports: [report] });
+  expect(workloadDb.getDismissedAssignments).toHaveBeenCalledWith('100');
+  expect(workloadDb.getStudentTimeReports).toHaveBeenCalledWith('100');
+
+  const restoreFromInactiveCourse = await dismiss('99', false);
+  expect(restoreFromInactiveCourse.status).toBe(200);
+  expect(await restoreFromInactiveCourse.json()).toEqual({ dismissedAssignment: null });
+  expect(workloadDb.restoreAssignment).toHaveBeenCalledWith('100', '99', '7');
+
+  const remove = await localFetch(`${apiUrl}/workload/courses/42/assignments/7/time`, { method: 'DELETE', headers: { Cookie: cookie } });
+  expect(remove.status).toBe(200);
+  expect(await remove.json()).toEqual({ estimatedMinutes: 75, reportCount: 3 });
+  expect(workloadDb.removeAssignmentTimeReport).toHaveBeenCalledWith('100', '42', '7');
 });
