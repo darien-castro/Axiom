@@ -17,8 +17,9 @@ router.post('/courses/:courseID/:assignmentID', async (_req, res) => {
     }
     // TODO don't have assignment cleaner individually
     res.send({ assignments });
-  } catch (error) {
-    res.status(500).json({ error: `${error}` });
+  } catch {
+    console.error('Individual assignment request failed');
+    res.status(500).json({ error: 'Failed to retrieve assignment' });
   }
 });
 

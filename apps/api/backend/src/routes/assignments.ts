@@ -19,8 +19,9 @@ const handleAssignments = async (_req: any, res: any) => {
       return;
     }
     res.send({ cleanAssignments });
-  } catch (error) {
-    res.status(500).json({ error: `${error}` });
+  } catch {
+    console.error('Assignment list request failed');
+    res.status(500).json({ error: 'Failed to retrieve assignments' });
   }
 };
 

@@ -340,6 +340,7 @@ export class DatabaseService {
       }
     } catch (error) {
       console.error('Error pushing assignments:', error);
+      throw error;
     }
   }
 

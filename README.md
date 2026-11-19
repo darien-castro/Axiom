@@ -162,3 +162,35 @@ Base URL `http://localhost:5000`. All `/api` routes are `POST` with a JSON body.
 ## License
 
 See [LICENSE](LICENSE).
+
+For **Sprint 2**, I reviewed Axiom's backend to see how assignment data was being saved and how database errors were handled. I found that pushAssignments() was logging failed Prisma database writes without passing the errors back. This meant Axiom could still report a successful assignment sync even when saving failed.
+
+To fix this, I updated the function to throw the error instead of silently ignoring it. I also improved the assignment API error handling so internal database details aren't exposed to users. The successful responses remain unchanged.
+
+Testing and Results
+
+I added automated tests to check successful assignment saves, failed writes, synchronization order, cached assignments, and API error handling.
+
+All 18 tests passed across three Vitest test files.
+
+git diff --check passed.
+
+The tests used mocked Prisma, Canvas, and Express objects, without connecting to a live database or server.
+
+Full TypeScript validation couldn't be completed because some backend dependencies and type definitions weren't installed.
+
+Known Limitations
+
+Assignment batches still aren't transactional, meaning some assignments might save before a later one fails. The change also doesn't reverse synchronization timestamps already updated during authentication.
+
+Running the Tests
+
+From apps/api/backend, the tests were run using a locally cached Vitest 3.0.7 installation. The command used a machine-specific cache path, so other developers should use the project's configured Vitest setup after installing dependencies.
+
+AI Assistance
+
+I used AI assistance to inspect the backend, help implement the fix, generate tests, and run validation checks. I reviewed and approved the changes before committing them.
+
+Outcome
+
+The assignment synchronization process now properly reports database write failures instead of continuing as if everything saved successfully. The API also handles these failures without exposing internal error details.
