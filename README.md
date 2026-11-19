@@ -156,9 +156,13 @@ Base URL `http://localhost:5000`. All `/api` routes are `POST` with a JSON body.
 
 <img width="1886" height="1007" alt="261104_22h17m07s_screenshot" src="https://github.com/user-attachments/assets/ba0a311f-1db5-4c8a-b42e-71bc63ef52dd" />
 
+### Course Overview Page
+<img width="1470" height="923" alt="Screenshot 2026-11-19 at 3 52 27 PM" src="https://github.com/user-attachments/assets/6b27e3d9-36f6-4d03-b3f0-175052d4e2db" />
+
 ### Assignments Page (Dark Mode)
 
-<img width="1878" height="1006" alt="image" src="https://github.com/user-attachments/assets/c1ff625d-921d-4543-8c24-fd055135565e" />
+<img width="1470" height="923" alt="Screenshot 2026-11-19 at 3 51 36 PM" src="https://github.com/user-attachments/assets/dcd787a4-f0eb-4a6c-83a3-61888d656aa0" />
+
 
 
 
