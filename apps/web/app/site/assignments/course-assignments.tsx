@@ -1,5 +1,6 @@
 "use client";
 
+import AssignmentDeadline, { useDeadlineClock } from "@/components/custom/AssignmentDeadline";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -15,7 +16,7 @@ import {
   assignmentDeadline, isClosed, sortAssignments, type AssignmentView, type CourseAssignment,
 } from "@/lib/assignment-ranking";
 import {
-  assignmentAvailability, assignmentIdentity, canvasWorkload, formatWorkloadDate, WorkloadRequestError,
+  assignmentAvailability, assignmentIdentity, canvasWorkload, WorkloadRequestError,
   type DismissedAssignment, type RankableAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
 import { demoWorkload, demoWorkloadLabel, getDemoAssignment } from "@/lib/demo-workload";
@@ -199,7 +200,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
     window.history.replaceState(null, "", url);
   }
 
-  const now = state.status === "ready" ? state.now : 0;
+  const now = useDeadlineClock(demo, state.status === "ready" ? state.now : 0);
   const filteredCourses = courses.filter(({ courseId }) => selectedCourses.has(courseId));
   const allAssignments = state.status === "ready" ? courses.flatMap((course) =>
     (state.work[course.courseId] ?? [])
@@ -460,40 +461,40 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
     <ContextMenu.Trigger render={<li className="rounded-2xl border border-border/80 bg-card p-4 text-card-foreground shadow-xs sm:p-5 md:p-6" />} onKeyDown={openMenuFromKeyboard}>
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          {course.courseCode && <Badge variant="secondary" className="font-mono">{course.courseCode}</Badge>}
-          {course.courseName !== course.courseCode && <span className="wrap-anywhere text-xs text-muted-foreground">{course.courseName}</span>}
-          {sample && <Badge variant="outline" className="capitalize">{sample.demoImportance} importance</Badge>}
+          {course.courseCode && <Badge variant="secondary" className="font-mono text-[0.8125rem]">{course.courseCode}</Badge>}
+          {course.courseName !== course.courseCode && <span className="wrap-anywhere text-sm text-muted-foreground">{course.courseName}</span>}
+          {sample && <Badge variant="outline" className="text-[0.8125rem] capitalize">{sample.demoImportance} importance</Badge>}
         </div>
-        <h3 className="text-base font-semibold tracking-tight">
+        <h3 className="text-lg font-semibold tracking-tight">
           {course.canvasUrl ? <a className="inline-flex items-center gap-1.5 wrap-anywhere underline-offset-4 hover:underline"
             target="_blank" rel="noreferrer" href={course.canvasUrl + "/assignments/" + encodeURIComponent(assignmentId)}>
             {assignment.assignmentName}
             <HugeiconsIcon icon={ArrowUpRight01Icon} aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
           </a> : assignment.assignmentName}
         </h3>
-        {status && <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        {status && <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <span>{status}</span>
           {grade && <span className={"rounded-full px-2 py-0.5 font-medium tabular-nums " + gradeColors[grade.color]}>
             Grade {grade.text}
           </span>}
         </p>}
       </div>
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs lg:grid-cols-4 lg:gap-x-6">
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm lg:grid-cols-4 lg:gap-x-6">
         <div><dt className="text-muted-foreground">Points possible</dt><dd className="mt-1 font-medium">{points}</dd></div>
         <div><dt className="text-muted-foreground">Estimated effort</dt><dd className="mt-1 font-medium">{effort}{sample?.type === "Major assessment" ? " (including preparation)" : ""}</dd></div>
         <div><dt className="text-muted-foreground">{sample ? "Probable grade change" : "Grade weight"}</dt><dd className="mt-1 font-medium">{sample ? "2.4%" : weight}</dd></div>
         <div><dt className="text-muted-foreground">Deadline</dt>
-          <dd className="mt-1 font-medium">{deadline.date ? <time dateTime={deadline.date}>{deadline.label} {formatWorkloadDate(deadline.date)}</time> : "No deadline"}</dd>
+          <dd className="mt-1 font-medium"><AssignmentDeadline date={deadline.date} label={deadline.label} now={now} outstanding={assignment.outstanding && !isClosed(assignment, now)} /></dd>
         </div>
       </dl>
-      <div className="mt-4 border-t border-border/60 pt-3 text-xs">
+      <div className="mt-4 border-t border-border/60 pt-3 text-[0.8125rem]">
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" className="h-auto min-h-9 min-w-0 shrink gap-1.5 whitespace-normal rounded-lg px-2 py-1 leading-tight sm:px-3" aria-expanded={effortOpen} aria-controls={effortPanelId}
+          <Button type="button" variant="outline" className="h-auto min-h-9 min-w-0 shrink gap-1.5 whitespace-normal rounded-lg px-2 py-1 text-[0.8125rem] leading-tight sm:px-3" aria-expanded={effortOpen} aria-controls={effortPanelId}
             onClick={() => setEffortOpen((open) => !open)}>
             {reportedMinutes === undefined ? "Report time spent" : "Edit reported effort"}
             <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden="true" className={"size-3.5 text-muted-foreground" + (effortOpen ? " rotate-180" : "")} />
           </Button>
-          <Button type="button" variant="outline" className={"h-auto min-h-9 min-w-0 shrink gap-1.5 whitespace-normal rounded-lg px-2 py-1 leading-tight sm:px-3" + (focused ? " border-primary/30 bg-primary/10" : "")}
+          <Button type="button" variant="outline" className={"h-auto min-h-9 min-w-0 shrink gap-1.5 whitespace-normal rounded-lg px-2 py-1 text-[0.8125rem] leading-tight sm:px-3" + (focused ? " border-primary/30 bg-primary/10" : "")}
             aria-pressed={focused} aria-label={(focused ? "Remove from Focus: " : "Add to Focus: ") + assignment.assignmentName}
             disabled={savingFocus} focusableWhenDisabled onClick={(event) => onToggleFocus(assignment, event.currentTarget)}>
             <HugeiconsIcon icon={Bookmark01Icon} aria-hidden="true" className="size-3.5" />

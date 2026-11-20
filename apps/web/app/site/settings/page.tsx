@@ -24,6 +24,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Dialog } from "@base-ui/react/dialog";
+import RelativeDatesSettings from "./relative-dates-settings";
 import CourseVisibilitySettings from "./course-visibility-settings";
 
 import {
@@ -79,6 +80,7 @@ function SettingsView() {
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Demo mode · Changes are saved in this browser.</p>
       </header>
+      <RelativeDatesSettings />
       <CourseVisibilitySettings demo />
     </div>;
   }
@@ -313,6 +315,7 @@ function CanvasSettings() {
         </div>
       )}
 
+      <RelativeDatesSettings />
       <CourseVisibilitySettings key={courseSessionRevision} />
 
       {/* 2x2 Settings Grid */}

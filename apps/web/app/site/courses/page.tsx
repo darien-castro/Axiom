@@ -1,11 +1,12 @@
 "use client";
 
+import AssignmentDeadline, { useDeadlineClock } from "@/components/custom/AssignmentDeadline";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import CourseVisibilityControls from "@/components/custom/CourseVisibilityControls";
 import {
-  assignmentAvailability, canvasWorkload, formatWorkloadDate, summarizeWorkload, workloadHoursLabel, WorkloadRequestError,
+  assignmentAvailability, canvasWorkload, summarizeWorkload, workloadHoursLabel, WorkloadRequestError,
   type WorkloadAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
 import { demoWorkload, demoWorkloadLabel } from "@/lib/demo-workload";
@@ -86,7 +87,7 @@ function CourseWorkload({ demo }: { demo: boolean }) {
   }
 
   const courses = state.status === "ready" ? state.courses : [];
-  const now = state.status === "ready" ? state.now : 0;
+  const now = useDeadlineClock(demo, state.status === "ready" ? state.now : 0);
   const rows = courses.map((course) => ({ ...course, summary: course.assignments && summarizeWorkload(course.assignments, now) }));
   const visibleRows = rows.filter((course) => !course.hidden);
   const hiddenCount = rows.length - visibleRows.length;
@@ -204,7 +205,7 @@ function CourseWorkload({ demo }: { demo: boolean }) {
                   const availability = assignmentAvailability(assignment, now);
                   return <li key={assignment.assignmentId}>
                     <strong>{assignment.assignmentName}</strong>
-                    {assignment.dueAt && <span>Due {formatWorkloadDate(assignment.dueAt)}</span>}
+                    <span><AssignmentDeadline date={assignment.dueAt} now={now} /></span>
                     {availability && <small>{availability}</small>}
                   </li>;
                 })}</ul> : <p>{selected.summary ? "No upcoming deadlines." : "Assignment dates could not be loaded."}</p>}
