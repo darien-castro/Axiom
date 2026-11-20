@@ -6,6 +6,7 @@ import {
   PaintBoardIcon,
   Sun01Icon,
   Moon02Icon,
+  ComputerIcon,
   Key01Icon,
   ShieldKeyIcon,
   SecurityCheckIcon,
@@ -50,10 +51,17 @@ import {
 import {
   THEMES,
   THEME_LIST,
-  applyTheme,
+  saveAppearance,
   getSavedTheme,
-  getSavedDarkMode,
+  getSavedAppearanceMode,
+  type AppearanceMode,
 } from "@/lib/themes";
+
+const appearanceOptions = {
+  light: { label: "Light", icon: Sun01Icon, iconClass: "text-amber-500" },
+  dark: { label: "Dark", icon: Moon02Icon, iconClass: "text-primary" },
+  system: { label: "System", icon: ComputerIcon, iconClass: "text-primary" },
+} satisfies Record<AppearanceMode, { label: string; icon: typeof Sun01Icon; iconClass: string }>;
 
 function subscribeStore(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -80,8 +88,10 @@ function SettingsView() {
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">Demo mode · Changes are saved in this browser.</p>
       </header>
-      <RelativeDatesSettings />
-      <CourseVisibilitySettings demo />
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <RelativeDatesSettings />
+        <CourseVisibilitySettings demo />
+      </div>
     </div>;
   }
   return <CanvasSettings />;
@@ -103,10 +113,10 @@ function CanvasSettings() {
     () => "Rose Pine"
   );
 
-  const isDarkMode = useSyncExternalStore(
+  const appearanceMode = useSyncExternalStore(
     subscribeStore,
-    getSavedDarkMode,
-    () => false
+    getSavedAppearanceMode,
+    () => "system" as const
   );
 
   const hasActiveSession = useSyncExternalStore(
@@ -149,13 +159,13 @@ function CanvasSettings() {
   };
 
   const handleThemeChange = (themeId: string) => {
-    applyTheme(themeId, isDarkMode);
+    saveAppearance(themeId, appearanceMode);
     showNotification("success", `Theme changed to ${THEMES[themeId]?.name || themeId}`);
   };
 
-  const handleModeToggle = (darkMode: boolean) => {
-    applyTheme(selectedTheme, darkMode);
-    showNotification("info", `Switched to ${darkMode ? "Dark" : "Light"} mode`);
+  const handleModeToggle = (mode: AppearanceMode) => {
+    saveAppearance(selectedTheme, mode);
+    showNotification("info", mode === "system" ? "Following system appearance" : `Switched to ${appearanceOptions[mode].label} mode`);
   };
 
   const handleUpdateApiKey = async () => {
@@ -315,11 +325,10 @@ function CanvasSettings() {
         </div>
       )}
 
-      <RelativeDatesSettings />
-      <CourseVisibilitySettings key={courseSessionRevision} />
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <RelativeDatesSettings />
+        <CourseVisibilitySettings key={courseSessionRevision} />
 
-      {/* 2x2 Settings Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* 1. Theme Change Dropdown & Appearance */}
         <Card className="rounded-2xl border border-border bg-card/60 backdrop-blur-md shadow-xs flex flex-col justify-between">
           <div>
@@ -335,7 +344,7 @@ function CanvasSettings() {
                   </div>
                 </div>
                 <Badge variant="outline" className="text-[11px] font-mono">
-                  {isDarkMode ? "Dark Mode" : "Light Mode"}
+                  {appearanceOptions[appearanceMode].label}
                 </Badge>
               </div>
             </CardHeader>
@@ -399,34 +408,22 @@ function CanvasSettings() {
                 )}
               </div>
 
-              {/* Mode Toggle (Light / Dark) */}
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-foreground">Interface Mode</Label>
-                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl border border-border bg-muted/20">
-                  <button
-                    type="button"
-                    onClick={() => handleModeToggle(false)}
-                    className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
-                      !isDarkMode
-                        ? "bg-card text-foreground shadow-xs border border-border/80"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <HugeiconsIcon icon={Sun01Icon} strokeWidth={2} className="size-4 text-amber-500" />
-                    <span>Light Mode</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleModeToggle(true)}
-                    className={`flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
-                      isDarkMode
-                        ? "bg-card text-foreground shadow-xs border border-border/80"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <HugeiconsIcon icon={Moon02Icon} strokeWidth={2} className="size-4 text-primary" />
-                    <span>Dark Mode</span>
-                  </button>
+                <Label id="appearance-mode-label" className="text-xs font-medium text-foreground">Interface Mode</Label>
+                <div role="group" aria-labelledby="appearance-mode-label" className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-muted/20 p-1">
+                  {(Object.keys(appearanceOptions) as AppearanceMode[]).map((mode) => {
+                    const { label, icon, iconClass } = appearanceOptions[mode];
+                    return <button key={mode} type="button" aria-pressed={appearanceMode === mode}
+                      onClick={() => handleModeToggle(mode)}
+                      className={`flex min-h-9 items-center justify-center gap-1.5 rounded-lg border px-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring ${
+                        appearanceMode === mode
+                          ? "border-border/80 bg-card text-foreground shadow-xs"
+                          : "border-transparent text-muted-foreground hover:text-foreground"
+                      }`}>
+                      <HugeiconsIcon icon={icon} aria-hidden="true" strokeWidth={2} className={`hidden size-4 shrink-0 sm:block ${iconClass}`} />
+                      {label}
+                    </button>;
+                  })}
                 </div>
               </div>
 

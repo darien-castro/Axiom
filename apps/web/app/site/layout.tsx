@@ -13,7 +13,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Separator } from "@/components/ui/separator";
-import { applyTheme, getSavedTheme, getSavedDarkMode } from "@/lib/themes";
+import { applyTheme, getSavedTheme, getSavedAppearanceMode, systemAppearanceQuery } from "@/lib/themes";
 
 const navItems = [
   {
@@ -59,9 +59,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   useEffect(() => {
-    const savedTheme = getSavedTheme();
-    const savedDark = getSavedDarkMode();
-    applyTheme(savedTheme, savedDark);
+    const systemAppearance = window.matchMedia(systemAppearanceQuery);
+    const refreshAppearance = () => applyTheme(getSavedTheme(), getSavedAppearanceMode());
+    refreshAppearance();
+    systemAppearance.addEventListener("change", refreshAppearance);
+    window.addEventListener("storage", refreshAppearance);
+    return () => {
+      systemAppearance.removeEventListener("change", refreshAppearance);
+      window.removeEventListener("storage", refreshAppearance);
+    };
   }, []);
 
   return (

@@ -13,10 +13,10 @@ type VisibilityState = { status: "loading" | "signed-out" | "error" } | { status
 
 export default function CourseVisibilitySettings({ demo = false }: { demo?: boolean }) {
   return <Dialog.Root>
-    <Card id="course-visibility" className="rounded-2xl border border-border bg-card/60 shadow-xs">
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
+    <Card id="course-visibility" size="sm" className="rounded-2xl border border-border bg-card/60 shadow-xs">
+      <CardHeader className="flex flex-1 flex-row items-center justify-between gap-4">
         <div className="space-y-1">
-          <CardTitle className="text-base font-semibold">Course visibility</CardTitle>
+          <CardTitle className="text-sm font-semibold">Course visibility</CardTitle>
           <CardDescription>Choose which courses appear on your workload map. Hidden courses still count towards your workload.</CardDescription>
         </div>
         <Dialog.Trigger render={<Button type="button" variant="outline" size="lg" aria-label="Edit course visibility" />}>

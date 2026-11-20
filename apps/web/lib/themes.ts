@@ -455,8 +455,13 @@ export const THEMES: Record<string, ThemeMeta> = {
 
 export const THEME_LIST = Object.values(THEMES);
 
-export function applyTheme(themeId: string, isDark: boolean) {
+export type AppearanceMode = 'light' | 'dark' | 'system';
+
+export const systemAppearanceQuery = '(prefers-color-scheme: dark)';
+
+export function applyTheme(themeId: string, mode: AppearanceMode) {
   if (typeof document === 'undefined') return;
+  const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia(systemAppearanceQuery).matches);
   const theme = THEMES[themeId] || THEMES['Rose Pine'];
   const vars = isDark ? theme.dark : theme.light;
 
@@ -471,10 +476,13 @@ export function applyTheme(themeId: string, isDark: boolean) {
   for (const [prop, val] of Object.entries(vars)) {
     root.style.setProperty(prop, val);
   }
+}
 
+export function saveAppearance(themeId: string, mode: AppearanceMode) {
+  applyTheme(themeId, mode);
   try {
     localStorage.setItem('axiom-theme', themeId);
-    localStorage.setItem('axiom-dark-mode', isDark ? 'dark' : 'light');
+    localStorage.setItem('axiom-dark-mode', mode);
     window.dispatchEvent(new Event('storage'));
   } catch {
     // ignore localstorage errors
@@ -490,13 +498,12 @@ export function getSavedTheme(): string {
   }
 }
 
-export function getSavedDarkMode(): boolean {
-  if (typeof window === 'undefined') return false;
+export function getSavedAppearanceMode(): AppearanceMode {
+  if (typeof window === 'undefined') return 'system';
   try {
     const saved = localStorage.getItem('axiom-dark-mode');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return saved === 'light' || saved === 'dark' ? saved : 'system';
   } catch {
-    return false;
+    return 'system';
   }
 }

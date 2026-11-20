@@ -5,10 +5,10 @@ import { setRelativeDueDates, useRelativeDueDates } from "@/components/custom/As
 
 export default function RelativeDatesSettings() {
   const enabled = useRelativeDueDates();
-  return <Card className="rounded-2xl border border-border bg-card/60 shadow-xs">
-    <CardHeader className="flex flex-row items-center justify-between gap-4">
+  return <Card size="sm" className="rounded-2xl border border-border bg-card/60 shadow-xs">
+    <CardHeader className="flex flex-1 flex-row items-center justify-between gap-4">
       <div className="space-y-1">
-        <CardTitle>Relative dates</CardTitle>
+        <CardTitle className="text-sm font-semibold">Show relative dates</CardTitle>
         <CardDescription>Hover over the date to see the absolute due date and time.</CardDescription>
       </div>
       <input type="checkbox" role="switch" aria-label="Relative due dates" checked={enabled}
