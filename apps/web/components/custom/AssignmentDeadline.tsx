@@ -32,9 +32,7 @@ export function useDeadlineClock(demo: boolean, snapshot: number) {
   return demo ? snapshot : Math.max(snapshot, now ?? 0);
 }
 
-const clock = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
 const fullDate = new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short" });
-const shortDate = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
 
 export default function AssignmentDeadline({ date, label = "Due", now, outstanding = true }: {
   date: string | null;
@@ -53,20 +51,17 @@ export default function AssignmentDeadline({ date, label = "Due", now, outstandi
       : upcoming && remaining < 12 * hour ? "text-orange-700 dark:text-orange-300" : undefined;
   const showRelative = relative && upcoming && remaining <= 7 * day;
   const minutes = Math.ceil(remaining / minute);
-  const duration = [
-    Math.floor(minutes / 1440) ? Math.floor(minutes / 1440) + "d" : "",
-    Math.floor(minutes / 60) % 24 ? Math.floor(minutes / 60) % 24 + "h" : "",
-    minutes % 60 ? minutes % 60 + "m" : "",
-  ].filter(Boolean).join(" ");
-  const due = new Date(timestamp);
-  const today = new Date(now);
-  const tomorrow = new Date(now);
-  tomorrow.setDate(today.getDate() + 1);
-  const dateLabel = due.toDateString() === today.toDateString() ? "Today"
-    : due.toDateString() === tomorrow.toDateString() ? "Tomorrow" : shortDate.format(due);
+  const hours = Math.floor(minutes / 60);
+  const leftoverMinutes = minutes % 60;
+  const duration = remaining > day ? `${Math.floor(remaining / day)}d`
+    : [hours ? `${hours}h` : "", leftoverMinutes ? `${leftoverMinutes}m` : ""].filter(Boolean).join(" ");
+  const absolute = `${label} ${formatWorkloadDate(date)}`;
 
-  return <time dateTime={date} title={fullDate.format(due)} className={color}>
-    {showRelative ? <>Due in <strong>{duration}</strong> ({dateLabel} @ {clock.format(due)})</>
-      : <>{label} {formatWorkloadDate(date)}</>}
+  return <time dateTime={date} title={fullDate.format(timestamp)} tabIndex={showRelative ? 0 : undefined}
+    className={`group/deadline ${color ?? ""}`}>
+    {showRelative ? <>
+      <b className="font-normal group-hover/deadline:hidden group-focus/deadline:hidden">Due in <strong>{duration}</strong></b>
+      <b className="hidden font-normal group-hover/deadline:inline group-focus/deadline:inline">{absolute}</b>
+    </> : absolute}
   </time>;
 }

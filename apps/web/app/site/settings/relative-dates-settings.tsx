@@ -8,8 +8,8 @@ export default function RelativeDatesSettings() {
   return <Card className="rounded-2xl border border-border bg-card/60 shadow-xs">
     <CardHeader className="flex flex-row items-center justify-between gap-4">
       <div className="space-y-1">
-        <CardTitle>Relative due dates</CardTitle>
-        <CardDescription>Show time remaining and the due time for assignments due within seven days.</CardDescription>
+        <CardTitle>Relative dates</CardTitle>
+        <CardDescription>Hover over the date to see the absolute due date and time.</CardDescription>
       </div>
       <input type="checkbox" role="switch" aria-label="Relative due dates" checked={enabled}
         onChange={(event) => setRelativeDueDates(event.target.checked)}
