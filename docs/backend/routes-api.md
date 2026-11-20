@@ -28,6 +28,16 @@ All backend routes are mounted under the `/api` prefix on port `5000`.
 
 ---
 
+### `DELETE /api/verify`
+
+Invalidates the current Axiom session and clears its cookie. Returns `204 No Content`.
+
+### `GET /api/me/profile`
+
+Uses session authentication and returns the current Canvas user's full `name` and `avatarUrl`. `avatarUrl` is `null` when a profile photo URL is unavailable.
+
+---
+
 ### `POST /api/courses`
 - **Description**: Retrieves all courses enrolled by the authenticated student.
 - **Request Body**:

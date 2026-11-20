@@ -5,6 +5,16 @@ import db from '../services/databaseService';
 
 const router = Router();
 
+router.delete('/verify', async (req, res) => {
+  try {
+    if (req.session?.sessionKey) await db.deleteSessionKey(req.session.sessionKey);
+    req.session = null;
+    res.sendStatus(204);
+  } catch {
+    res.status(500).json({ error: 'Could not end the session.' });
+  }
+});
+
 // goal here would be getting a session set up, so we store a key in server, and
 // then user saves key in browser that we identify with them
 

@@ -762,13 +762,7 @@ export class DatabaseService {
   }
 
   async deleteSessionKey(sessionKey: string): Promise<void> {
-    try {
-      await prisma.session.deleteMany({
-        where: { sessionKey },
-      });
-    } catch (error) {
-      console.error('Error deleting session key:', error);
-    }
+    await prisma.session.deleteMany({ where: { sessionKey } });
   }
 }
 

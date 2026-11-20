@@ -189,6 +189,7 @@ function CanvasSettings() {
         setKeyUpdateMessage("Canvas API Key verified and session updated!");
         setNewApiKey("");
         setCourseSessionRevision((current) => current + 1);
+        window.dispatchEvent(new Event("axiom-session-change"));
         if (typeof window !== "undefined") {
           window.dispatchEvent(new Event("storage"));
         }

@@ -10,8 +10,10 @@ import {
   Book02Icon,
   Task01Icon,
   Settings01Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import SidebarAccount from "./sidebar-account";
 import { Separator } from "@/components/ui/separator";
 import { applyTheme, getSavedTheme, getSavedAppearanceMode, systemAppearanceQuery } from "@/lib/themes";
 
@@ -72,7 +74,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-      <Suspense fallback={<Sidebar demo={false} />}><SidebarMode /></Suspense>
+      <Suspense fallback={<Sidebar demo={false} showAccount={false} />}><SidebarMode /></Suspense>
       <main className="min-w-0 flex-1 h-screen overflow-y-auto bg-background text-foreground">
         {children}
       </main>
@@ -84,7 +86,7 @@ function SidebarMode() {
   return <Sidebar demo={useSearchParams().get("demo") === "1"} />;
 }
 
-function Sidebar({ demo }: { demo: boolean }) {
+function Sidebar({ demo, showAccount = !demo }: { demo: boolean; showAccount?: boolean }) {
   const pathname = usePathname();
   const activeItems = demo ? navItems.filter(({ name }) => name === "Courses" || name === "Assignments") : navItems;
   const demoQuery = demo ? "?demo=1" : "";
@@ -153,6 +155,11 @@ function Sidebar({ demo }: { demo: boolean }) {
 
         {/* Sidebar Footer */}
         <div className="flex flex-col gap-3 pt-4 border-t border-border/60">
+          {demo ? <Link href="/" aria-label="Sign in"
+            className="flex items-center justify-center gap-3 rounded-xl px-2 py-2 text-xs font-semibold hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring md:justify-start md:px-3">
+            <HugeiconsIcon icon={UserCircleIcon} aria-hidden="true" className="size-8 shrink-0 text-muted-foreground" />
+            <span className="sr-only md:not-sr-only">Sign in</span>
+          </Link> : showAccount && <SidebarAccount />}
           <Link
             href={"/site/settings" + demoQuery}
             className={`flex items-center justify-center md:justify-start gap-3 rounded-xl px-2 md:px-3 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:bg-muted/40 hover:text-foreground ${
@@ -168,22 +175,6 @@ function Sidebar({ demo }: { demo: boolean }) {
             />
             <span className="sr-only md:not-sr-only">Settings</span>
           </Link>
-
-          {/* Data Connection Status Pill */}
-          {!demo && pathname !== "/site/courses" && pathname !== "/site/assignments" && <div className="rounded-xl border border-border/80 bg-muted/20 p-2.5 hidden md:flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="text-[0.68rem] text-muted-foreground font-medium">
-                Canvas Sync Active
-              </span>
-            </div>
-            <span className="text-[0.62rem] text-muted-foreground/80 font-mono">
-              Demo
-            </span>
-          </div>}
         </div>
       </aside>
   );

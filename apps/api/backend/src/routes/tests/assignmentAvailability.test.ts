@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from 'vi
 import assignmentsRoute from '../assignments';
 import courseWorkloadRoute from '../courseWorkload';
 import verifyRoute from '../verify';
+import meRoute from '../me';
 
 const sessions = new Map<string, string>();
 const workloadDb = vi.hoisted(() => ({
@@ -25,6 +26,7 @@ vi.mock('../../services/databaseService', () => ({
   default: {
     ...workloadDb,
     insertSessionKey: async (sessionKey: string, apiKey: string) => { sessions.set(sessionKey, apiKey); },
+    deleteSessionKey: async (sessionKey: string) => { sessions.delete(sessionKey); },
     getSessionApiKey: async (sessionKey: string) => sessions.get(sessionKey) ?? null,
     getCourseCreditHours: async () => [{ courseId: '42', creditHours: 3.5 }],
     getAssignmentTimeEstimates: async () => [{ assignmentId: '7', estimatedMinutes: 75, reportCount: 3 }],
@@ -42,7 +44,7 @@ beforeAll(async () => {
   const app = express();
   app.use(cookieSession({ name: 'AxiomCookie', keys: ['test-session-key'] }));
   app.use(express.json());
-  app.use('/api', verifyRoute, courseWorkloadRoute, assignmentsRoute);
+  app.use('/api', verifyRoute, courseWorkloadRoute, assignmentsRoute, meRoute);
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address();
@@ -335,4 +337,23 @@ test('loads, adds and removes focus entries for the signed-in student', async ()
   expect(remove.status).toBe(200);
   expect(await remove.json()).toEqual({ focused: false });
   expect(workloadDb.saveAssignmentFocus).toHaveBeenCalledWith('100', '42', '7', false);
+});
+
+test('loads the current Canvas profile and invalidates the session on sign out', async () => {
+  canvasFetch.mockImplementation(async (url) => {
+    expect(url).toBe(`${canvasUrl}/users/self`);
+    return Response.json({ id: 100, name: 'Casey Student', avatar_url: 'https://example.com/avatar.png' });
+  });
+  const cookie = await signIn('student-a');
+  const profileUrl = `${apiUrl}/me/profile`;
+  const headers = { Cookie: cookie };
+  expect((await localFetch(profileUrl)).status).toBe(401);
+  const profile = await localFetch(profileUrl, { headers });
+  expect(profile.headers.get('Cache-Control')).toBe('private, no-store');
+  expect(await profile.json()).toEqual({ name: 'Casey Student', avatarUrl: 'https://example.com/avatar.png' });
+
+  const logout = await localFetch(`${apiUrl}/verify`, { method: 'DELETE', headers });
+  expect(logout.status).toBe(204);
+  expect(logout.headers.getSetCookie().some((value) => value.startsWith('AxiomCookie=;'))).toBe(true);
+  expect((await localFetch(profileUrl, { headers })).status).toBe(401);
 });

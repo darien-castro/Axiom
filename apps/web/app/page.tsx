@@ -79,7 +79,7 @@ export default function Home() {
     };
     setStatus('loading');
     try {
-      const response = await fetch("http://localhost:5000/api/verify", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
