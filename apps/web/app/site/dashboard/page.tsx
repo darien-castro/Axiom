@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import RecentlySubmitted from "./recently-submitted";
 
 interface CourseInfo {
   courseID: string;
@@ -636,6 +637,8 @@ export default function DashboardPage() {
           </Card>
         )}
       </section>
+
+      {isAuthenticated === true && <RecentlySubmitted />}
 
       {/* 3. SUBSEQUENT UPCOMING ASSIGNMENTS */}
       <section className="flex flex-col gap-4 pt-4 pb-12">

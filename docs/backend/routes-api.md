@@ -78,6 +78,7 @@ Uses session authentication and returns the current Canvas user's full `name` an
         "assignmentName": "Lab report",
         "availableFrom": "2026-11-19T15:00:00Z",
         "dueAt": "2026-11-20T23:00:00Z",
+        "submittedAt": null,
         "availableUntil": "2026-11-23T23:00:00Z",
         "lockedForUser": false,
         "outstanding": true,
@@ -87,7 +88,7 @@ Uses session authentication and returns the current Canvas user's full `name` an
     ]
   }
   ```
-  `lockedForUser` is `null` if Canvas omits the lock status. `outstanding` uses the current student's Canvas submission state. The time estimate is the median of saved reports and is `null` when none exist.
+  `submittedAt` is the current student’s Canvas submission timestamp, or `null` if Canvas has none. `lockedForUser` is `null` if Canvas omits the lock status. `outstanding` uses the current student's Canvas submission state. The time estimate is the median of saved reports and is `null` when none exist.
 - **Optional query**: `?gradeImpact=true` also returns `pointsPossible`, `gradeImpactPercent`, and the student's visible `submissionGrade` (`label` and `score`, or `null`). The impact percentage estimates the assignment's share of the final course grade and is `null` when Canvas data or grading rules prevent a reliable estimate.
 - **Responses**:
   - `401 Unauthorized`: Missing or invalid authentication.

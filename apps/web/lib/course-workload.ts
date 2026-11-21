@@ -22,6 +22,7 @@ export interface WorkloadAssignment extends TimeEstimate {
   assignmentName: string;
   availableFrom: string | null;
   dueAt: string | null;
+  submittedAt: string | null;
   availableUntil: string | null;
   lockedForUser: boolean | null;
   outstanding: boolean;
@@ -30,6 +31,7 @@ export interface WorkloadAssignment extends TimeEstimate {
 export interface RankableAssignment extends WorkloadAssignment {
   pointsPossible: number | null;
   gradeImpactPercent: number | null;
+  gradeProjection: { gradeAtZero: number; percentPerPoint: number } | null;
   submissionGrade: { label: string | null; score: number | null } | null;
 }
 

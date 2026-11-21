@@ -169,7 +169,7 @@ test('returns all pages with separate effective dates for each signed-in student
       due_at: authorization === 'Bearer student-a' ? '2026-11-20T23:00:00Z' : '2026-11-22T23:00:00Z',
       lock_at: '2026-11-23T23:00:00Z',
       locked_for_user: false,
-      submission: { workflow_state: 'graded', missing: true },
+      submission: { workflow_state: 'graded', missing: true, submitted_at: '2026-11-20T21:00:00Z' },
     }], { headers: { Link: `<${firstPage}>; rel="current", <${secondPage}>; rel="next"` } });
   });
 
@@ -187,11 +187,13 @@ test('returns all pages with separate effective dates for each signed-in student
     {
       assignmentId: '7', assignmentName: 'Lab report', availableFrom: '2026-11-19T15:00:00Z',
       dueAt: '2026-11-20T23:00:00Z', availableUntil: '2026-11-23T23:00:00Z', lockedForUser: false,
+      submittedAt: '2026-11-20T21:00:00Z',
       outstanding: true, estimatedMinutes: 75, reportCount: 3,
     },
     {
       assignmentId: '8', assignmentName: 'No dates', availableFrom: null,
       dueAt: null, availableUntil: null, lockedForUser: true,
+      submittedAt: null,
       outstanding: false, estimatedMinutes: null, reportCount: 0,
     },
   ] });
