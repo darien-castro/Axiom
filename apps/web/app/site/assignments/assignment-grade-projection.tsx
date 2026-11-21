@@ -17,7 +17,7 @@ function GradeDifference({ projected, current }: { projected: number; current: n
 
   return <span className={`whitespace-nowrap text-xs font-medium tabular-nums ${color}`}
     title={`${label} percentage points vs. current course grade`}>
-    <span aria-hidden="true">{difference > 0 ? "↑ " : difference < 0 ? "↓ " : ""}{label} pp</span>
+    <span aria-hidden="true">{difference > 0 ? "↑ " : difference < 0 ? "↓ " : ""}{label}%</span>
     <span className="sr-only">{label} percentage points vs. current course grade</span>
   </span>;
 }
