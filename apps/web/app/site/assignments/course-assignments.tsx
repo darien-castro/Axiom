@@ -20,6 +20,7 @@ import {
   type DismissedAssignment, type RankableAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
 import { demoWorkload, demoWorkloadLabel, getDemoAssignment } from "@/lib/demo-workload";
+import AssignmentGradeProjection from "./assignment-grade-projection";
 import DismissedAssignments from "./dismissed-assignments";
 
 type WorkspaceView = AssignmentView | "semester" | "focus";
@@ -58,6 +59,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   const [state, setState] = useState<AssignmentState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [view, setView] = useState<WorkspaceView>("for-you");
+  const [whatIfScores, setWhatIfScores] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [dismissalStatus, setDismissalStatus] = useState("");
   const [dismissalError, setDismissalError] = useState<{ message: string; restoring: boolean } | null>(null);
@@ -226,6 +228,8 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
     focusedIds,
     savingFocus,
     saving,
+    whatIfScores,
+    onWhatIfScore: (key: string, score: number) => setWhatIfScores((scores) => ({ ...scores, [key]: score })),
     onEstimate: updateEstimate,
     onDismiss: (courseId: string, assignmentId: string) => void changeDismissal(courseId, assignmentId, true),
     onToggleFocus: (assignment: CourseAssignment, button: HTMLButtonElement) => {
@@ -366,31 +370,36 @@ type AssignmentActions = {
   onToggleFocus: (assignment: CourseAssignment, button: HTMLButtonElement) => void;
 };
 
-function AssignmentList({ assignments, now, reportedMinutes, focusedIds, savingFocus, saving, onEstimate, onDismiss, onToggleFocus }: AssignmentActions & {
+function AssignmentList({ assignments, now, reportedMinutes, focusedIds, savingFocus, saving, onEstimate, onDismiss, onToggleFocus, whatIfScores, onWhatIfScore }: AssignmentActions & {
   assignments: CourseAssignment[];
   now: number;
   reportedMinutes: ReadonlyMap<string, number>;
   focusedIds: ReadonlySet<string>;
   savingFocus: ReadonlySet<string>;
   saving: ReadonlySet<string>;
+  whatIfScores: Readonly<Record<string, number>>;
+  onWhatIfScore: (key: string, score: number) => void;
 }) {
   return <ul className="grid gap-3.5">
     {assignments.map((assignment) => {
       const key = assignmentIdentity(assignment.course.courseId, assignment.assignmentId);
       return <AssignmentRow key={key} assignment={assignment} now={now} reportedMinutes={reportedMinutes.get(key)}
         focused={focusedIds.has(key)} savingFocus={savingFocus.has(key)} dismissing={saving.has(key)}
+        whatIfScore={whatIfScores[key] ?? 0} onWhatIfScore={(score) => onWhatIfScore(key, score)}
         onEstimate={onEstimate} onDismiss={onDismiss} onToggleFocus={onToggleFocus} />;
     })}
   </ul>;
 }
 
-function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus, dismissing, onEstimate, onDismiss, onToggleFocus }: AssignmentActions & {
+function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus, dismissing, onEstimate, onDismiss, onToggleFocus, whatIfScore, onWhatIfScore }: AssignmentActions & {
   assignment: CourseAssignment;
   now: number;
   reportedMinutes?: number;
   focused: boolean;
   savingFocus: boolean;
   dismissing: boolean;
+  whatIfScore: number;
+  onWhatIfScore: (score: number) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [effortOpen, setEffortOpen] = useState(false);
@@ -404,8 +413,6 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
   const status = availability.startsWith("Closes") ? "" : availability;
   const grade = !assignment.outstanding ? assignmentGradeBadge(assignment) : null;
   const points = assignment.pointsPossible == null ? "Unavailable" : assignment.pointsPossible.toLocaleString() + " pts";
-  const weight = assignment.gradeImpactPercent == null ? "Unavailable" :
-    assignment.gradeImpactPercent.toLocaleString(undefined, { maximumFractionDigits: 2 }) + "%";
   const effort = assignment.estimatedMinutes == null ? "No estimate" : formatEffort(assignment.estimatedMinutes);
 
   async function reportTime(event: FormEvent<HTMLFormElement>) {
@@ -482,7 +489,7 @@ function AssignmentRow({ assignment, now, reportedMinutes, focused, savingFocus,
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm lg:grid-cols-4 lg:gap-x-6">
         <div><dt className="text-muted-foreground">Points possible</dt><dd className="mt-1 font-medium">{points}</dd></div>
         <div><dt className="text-muted-foreground">Estimated effort</dt><dd className="mt-1 font-medium">{effort}{sample?.type === "Major assessment" ? " (including preparation)" : ""}</dd></div>
-        <div><dt className="text-muted-foreground">{sample ? "Probable grade change" : "Grade weight"}</dt><dd className="mt-1 font-medium">{sample ? "2.4%" : weight}</dd></div>
+        <AssignmentGradeProjection assignment={assignment} currentGrade={course.gradeScore} score={whatIfScore} onScoreChange={onWhatIfScore} />
         <div><dt className="text-muted-foreground">Deadline</dt>
           <dd className="mt-1 font-medium"><AssignmentDeadline date={deadline.date} label={deadline.label} now={now} outstanding={assignment.outstanding && !isClosed(assignment, now)} /></dd>
         </div>

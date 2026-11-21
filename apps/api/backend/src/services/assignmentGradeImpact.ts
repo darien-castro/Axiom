@@ -77,11 +77,13 @@ export function calculateGradeProjections(course: CanvasCourse, groups: CanvasAs
 
   const candidates: { id: string; group: GroupTotals; points: number; score: number | null }[] = [];
   for (const assignment of assignments) {
-    if (!countsTowardsGrade(assignment) || assignment.published === false || assignment.muted === true) continue;
+    if (!countsTowardsGrade(assignment) || assignment.published === false) continue;
     const group = totals.get(weighted ? String(assignment.assignment_group_id) : 'course');
     const points = assignment.points_possible;
     const submission = assignment.submission;
-    const score = submission?.posted_at !== null && submission?.workflow_state !== 'pending_review'
+    // Canvas can mark the assignment muted even when this student's score is posted.
+    const unposted = submission?.posted_at === null || (assignment.muted === true && !submission?.posted_at);
+    const score = !unposted && submission?.workflow_state !== 'pending_review'
       ? submission?.score ?? null : null;
     if (!group) return projections;
     if (typeof points !== 'number' || !Number.isFinite(points) || points < 0) {

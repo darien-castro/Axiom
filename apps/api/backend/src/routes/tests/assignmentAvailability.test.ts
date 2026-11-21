@@ -143,7 +143,8 @@ test.each([
   const response = await localFetch(`${apiUrl}/courses/42/assignments/availability?gradeImpact=true`, { headers: { 'X-API-Key': 'student-a' } });
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ assignments: [
-    { assignmentId: '7', pointsPossible: 50, gradeImpactPercent: expected, estimatedMinutes: 75 },
+    { assignmentId: '7', pointsPossible: 50, gradeImpactPercent: expected, estimatedMinutes: 75,
+      gradeProjection: dropLowest ? null : expect.any(Object) },
     { assignmentId: '8', outstanding: false },
     { assignmentId: '9', gradeImpactPercent: null },
     { assignmentId: '10', gradeImpactPercent: null },
@@ -358,4 +359,37 @@ test('loads the current Canvas profile and invalidates the session on sign out',
   expect(logout.status).toBe(204);
   expect(logout.headers.getSetCookie().some((value) => value.startsWith('AxiomCookie=;'))).toBe(true);
   expect((await localFetch(profileUrl, { headers })).status).toBe(401);
+});
+
+test.each([false, true])('projects the course grade with a hypothetical assignment score (weighted: %s)', async (weighted) => {
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/courses/42?include[]=total_scores`) return Response.json({ apply_assignment_group_weights: weighted });
+    if (url === `${canvasUrl}/courses/42/assignment_groups?per_page=100`) {
+      return Response.json([{ id: 1, group_weight: 40 }, { id: 2, group_weight: 60 }]);
+    }
+    expect(url).toBe(firstPage);
+    return Response.json([
+      { id: 1, assignment_group_id: 1, points_possible: 100, muted: true,
+        submission: { workflow_state: 'graded', score: 80, posted_at: '2026-11-20T12:00:00Z' } },
+      { id: 2, assignment_group_id: 1, points_possible: 100 },
+      { id: 3, assignment_group_id: 2, points_possible: 50, muted: true },
+      { id: 4, assignment_group_id: 2, points_possible: 100, submission: { workflow_state: 'graded', score: 100, posted_at: null } },
+      { id: 5, assignment_group_id: 1, points_possible: 50, submission: { excused: true } },
+      { id: 6, assignment_group_id: 1, points_possible: 100, muted: true, submission: { workflow_state: 'graded', score: 100 } },
+    ]);
+  });
+
+  const response = await localFetch(`${apiUrl}/courses/42/assignments/availability?gradeImpact=true`, { headers: { 'X-API-Key': 'student-a' } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ assignments: [
+    { gradeProjection: { gradeAtZero: 0, percentPerPoint: 1 } },
+    { gradeProjection: { gradeAtZero: 40, percentPerPoint: 0.5 } },
+    { gradeProjection: {
+      gradeAtZero: expect.closeTo(weighted ? 32 : 80 / 150 * 100),
+      percentPerPoint: expect.closeTo(weighted ? 1.2 : 100 / 150),
+    } },
+    { assignmentId: '4' },
+    { gradeProjection: null },
+    { assignmentId: '6' },
+  ] });
 });
