@@ -7,10 +7,11 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type K
 import { ContextMenu } from "@base-ui/react/context-menu";
 import { Menu } from "@base-ui/react/menu";
 import { Tabs } from "@base-ui/react/tabs";
-import { ArrowDown01Icon, ArrowUpRight01Icon, Bookmark01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUpRight01Icon, Bookmark01Icon, Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import FocusConfirmation from "@/components/custom/focus/FocusConfirmation";
 import {
   assignmentDeadline, isClosed, sortAssignments, type AssignmentView, type CourseAssignment,
@@ -59,6 +60,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   const [state, setState] = useState<AssignmentState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [view, setView] = useState<WorkspaceView>("for-you");
+  const [search, setSearch] = useState("");
   const [whatIfScores, setWhatIfScores] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [dismissalStatus, setDismissalStatus] = useState("");
@@ -213,10 +215,15 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   const isFocused = ({ course, assignmentId }: CourseAssignment) => focusedIds.has(assignmentIdentity(course.courseId, assignmentId));
   const focusCount = allAssignments.filter(isFocused).length;
   const failedCourses = state.status === "ready" && filteredCourses.filter(({ courseId }) => state.work[courseId] === null).length;
-  const showWholeList = view === "semester" || view === "focus";
-  const order = showWholeList ? "deadline" : view;
-  const activeAssignments = view === "focus" ? assignments.filter(isFocused)
-    : view === "semester" ? assignments : assignments.filter((assignment) => assignment.outstanding && !isClosed(assignment, now));
+  const terms = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const searching = terms.length > 0;
+  const showWholeList = searching || view === "semester" || view === "focus";
+  const order = view === "semester" || view === "focus" ? "deadline" : view;
+  const scopedAssignments = view === "focus" ? assignments.filter(isFocused) : assignments;
+  const activeAssignments = searching ? scopedAssignments.filter(({ assignmentName, course }) => {
+    const searchableText = [assignmentName, course.courseName, course.courseCode].join(" ").toLocaleLowerCase();
+    return terms.every((term) => searchableText.includes(term));
+  }) : showWholeList ? scopedAssignments : assignments.filter((assignment) => assignment.outstanding && !isClosed(assignment, now));
   const displayed = sortAssignments(activeAssignments, order, now);
   const archived = showWholeList ? [] : sortAssignments(assignments.filter((assignment) => !assignment.outstanding || isClosed(assignment, now)), order, now);
   const activeView = views.find(({ id }) => id === view);
@@ -288,10 +295,18 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
         {id === view && <>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5 sm:gap-4">
             <h2 className="text-base font-semibold">
-              {view === "focus" ? "My Focus List" : view === "semester" ? "Semester assignments" : "To do"}
-              <span className="ml-2 text-xs font-normal text-muted-foreground">{displayed.length} shown</span>
+              {searching ? "Search results" : view === "focus" ? "My Focus List" : view === "semester" ? "Semester assignments" : "To do"}
+              <span aria-live="polite" className="ml-2 text-xs font-normal text-muted-foreground">{displayed.length} shown</span>
             </h2>
-            <div className="flex items-end gap-2">
+            <div className="flex min-w-0 flex-wrap items-end gap-2">
+              <label className="flex w-full flex-col gap-1.5 text-xs text-muted-foreground sm:w-52">
+                Search assignments
+                <span className="relative block">
+                  <HugeiconsIcon icon={Search01Icon} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+                  <Input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Title or course" className="h-9 rounded-lg bg-card pl-9 text-foreground" />
+                </span>
+              </label>
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs text-muted-foreground">Course</span>
                 <CourseFilter courses={courses} selected={selectedCourses} onChange={changeCourseFilter} />
@@ -305,7 +320,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
           </div>}
           {displayed.length ? <AssignmentList assignments={displayed} now={now} {...listActions} />
             : <p className="rounded-xl border border-border bg-card p-5 text-sm">
-              {!filteredCourses.length ? "Select courses to see their assignments." : view === "focus"
+              {!filteredCourses.length ? "Select courses to see their assignments." : searching ? "No assignments match your search." : view === "focus"
                 ? "Use Add to Focus on any assignment to save it here." : view === "semester"
                   ? "No assignments in these courses." : "No outstanding assignments in these courses."}
             </p>}
