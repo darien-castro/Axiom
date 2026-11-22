@@ -54,7 +54,7 @@ export default function AssignmentGradeProjection({ assignment, currentGrade, sc
 
   return <div>
     <dt className="text-muted-foreground">{label}</dt>
-    <dd className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 font-medium">
+    <dd className="mt-1 font-medium">
       <Popover.Root open={open} onOpenChange={(next) => {
         if (next) setDraft(String(score));
         setOpen(next);
@@ -90,7 +90,6 @@ export default function AssignmentGradeProjection({ assignment, currentGrade, sc
           </Popover.Positioner>
         </Popover.Portal>
       </Popover.Root>
-      <GradeDifference projected={grade(score)} current={currentGrade} />
     </dd>
   </div>;
 }

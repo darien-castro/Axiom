@@ -69,7 +69,7 @@ export default function Home() {
     if (val === 'mocksite') {
       setStatus('success');
       setTimeout(() => {
-        router.push('/mocksite');
+        router.push('/site/dashboard');
       }, 2000);
       return;
     }
@@ -123,7 +123,7 @@ export default function Home() {
           <div className="min-w-[320px] shrink-0">
             <CardHeader>
               <CardTitle className="text-lg text-card-foreground">
-                Requires Canvas API key
+                Continue with Canvas API Key
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -134,7 +134,7 @@ export default function Home() {
                 <Input
                   id="input-demo-api-key"
                   type="password"
-                  placeholder="sk-..."
+                  placeholder="7301~..."
                   disabled={status === 'loading'}
                   className="border-input bg-muted/40 text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
                   onKeyDown={(e) => {
@@ -144,7 +144,12 @@ export default function Home() {
                   }}
                 />
                 <FieldDescription className="text-muted-foreground">
-                  Your API key is encrypted and stored securely.
+                  Your key is encrypted and stored securely.
+                  <span className="mt-1 block">
+                    Create one in "Approved Integrations" in {" "}
+                    <a href="https://uncc.instructure.com/profile/settings" target="_blank" rel="noreferrer"
+                      className="font-medium text-primary underline underline-offset-2">Canvas</a>.
+                  </span>
                 </FieldDescription>
               </Field>
             </CardContent>
