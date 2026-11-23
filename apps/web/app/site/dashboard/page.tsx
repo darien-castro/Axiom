@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Tabs } from "@base-ui/react/tabs";
 import {
-  GraduationCapIcon,
   Calendar03Icon,
   Clock01Icon,
   AlertCircleIcon,
@@ -12,7 +10,6 @@ import {
   ArrowRight01Icon,
   Task01Icon,
   Book02Icon,
-  CheckmarkCircle02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Card } from "@/components/ui/card";
@@ -21,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState } from "@/components/ui/loading-state";
 import RecentlySubmitted from "./recently-submitted";
-import SemesterGpa from "./semester-gpa";
+import ProjectedGpa from "./semester-gpa";
 
 interface CourseInfo {
   courseID: string;
@@ -60,9 +57,6 @@ interface RealAssignment {
   assignmentType?: string;
   assignmentPoints?: number | null;
 }
-
-const gpaTabClassName =
-  "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring data-active:bg-background data-active:text-foreground data-active:shadow-xs";
 
 function formatSemesterTerm(term?: string): string {
   if (!term || term.trim() === "") return "Current Semester";
@@ -202,7 +196,7 @@ export default function DashboardPage() {
   }
 
   const primaryTerm = courses.find((course) => course.courseTerm?.trim())?.courseTerm;
-  const activeSemester = primaryTerm ? formatSemesterTerm(primaryTerm) : "Fall 2026";
+  const activeSemester = formatSemesterTerm(primaryTerm);
   const enrolledCount = courses.length;
 
   return (
@@ -222,7 +216,7 @@ export default function DashboardPage() {
                   Semester: {activeSemester}
                 </Badge>
                 <Badge variant="secondary" className="px-3 py-1 text-xs">
-                  {enrolledCount > 0 ? `${enrolledCount} Enrolled Courses` : "4 Enrolled Courses"}
+                  {enrolledCount} Enrolled Courses
                 </Badge>
               </>
             )}
@@ -262,30 +256,17 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {isAuthenticated === true && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <HugeiconsIcon
-              icon={CheckmarkCircle02Icon}
-              strokeWidth={2}
-              className="size-4 text-emerald-600 dark:text-emerald-400"
-            />
-            <span className="font-medium text-foreground">
-              Canvas Session Synchronized: {enrolledCount} semester courses active for {dashboardData?.firstname} {dashboardData?.lastname || ""}
-            </span>
-          </div>
-          <span className="text-[11px] text-muted-foreground font-mono">
-            {gradeMap.size} grades synced
-          </span>
-        </div>
-      )}
-
       {error && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs text-destructive flex items-center gap-2">
           <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-4 shrink-0" />
           <span>Error connecting to backend: {error}. Showing cached / demo view.</span>
         </div>
       )}
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <ProjectedGpa />
+        <RecentlySubmitted authenticated={isAuthenticated === true} checking={loading && isAuthenticated === null} />
+      </div>
 
       {/* ACTIVE SEMESTER COURSES SECTION */}
       <section className="flex flex-col gap-4">
@@ -356,41 +337,6 @@ export default function DashboardPage() {
         ) : (
           <p className="text-sm text-muted-foreground">No courses to display.</p>
         )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <HugeiconsIcon
-            icon={GraduationCapIcon}
-            strokeWidth={2}
-            className="size-5 text-emerald-600 dark:text-emerald-400"
-          />
-          <h2 id="projected-gpa-heading" className="text-lg font-semibold text-foreground">
-            Projected GPA
-          </h2>
-        </div>
-
-        <Card className="rounded-xl border border-border/80 p-5 shadow-xs">
-          <Tabs.Root defaultValue="semester" className="flex flex-col gap-4">
-            <Tabs.List
-              aria-labelledby="projected-gpa-heading"
-              className="inline-flex self-start gap-1 rounded-lg bg-muted p-1"
-            >
-              <Tabs.Tab value="semester" className={gpaTabClassName}>Semester GPA</Tabs.Tab>
-              <Tabs.Tab value="overall" className={gpaTabClassName}>Overall GPA</Tabs.Tab>
-            </Tabs.List>
-
-            <Tabs.Panel value="semester" keepMounted className="rounded-md focus-visible:outline-2 focus-visible:outline-ring">
-              <SemesterGpa />
-            </Tabs.Panel>
-
-            <Tabs.Panel value="overall" className="rounded-md focus-visible:outline-2 focus-visible:outline-ring">
-              <p className="text-sm text-muted-foreground">
-                Overall GPA projection will use prior transcript GPA hours and quality points alongside the semester totals.
-              </p>
-            </Tabs.Panel>
-          </Tabs.Root>
-        </Card>
       </section>
 
       {/* 2. SCROLLING DOWN -> NEXT IMPORTANT ASSIGNMENT (LARGE) */}
@@ -576,8 +522,6 @@ export default function DashboardPage() {
           </Card>
         )}
       </section>
-
-      {isAuthenticated === true && <RecentlySubmitted />}
 
       {/* 3. SUBSEQUENT UPCOMING ASSIGNMENTS */}
       <section className="flex flex-col gap-4 pt-4 pb-12">

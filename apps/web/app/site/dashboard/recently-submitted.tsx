@@ -62,7 +62,7 @@ async function loadSubmissions(signal: AbortSignal): Promise<Snapshot> {
   return { submissions: [...latest.values()].sort((a, b) => b.timestamp - a.timestamp), failedCourses };
 }
 
-export default function RecentlySubmitted() {
+export default function RecentlySubmitted({ authenticated, checking }: { authenticated: boolean; checking: boolean }) {
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [now, setNow] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -75,6 +75,7 @@ export default function RecentlySubmitted() {
   const saving = useRef(false);
 
   useEffect(() => {
+    if (!authenticated) return;
     let lastCheck = 0;
 
     async function refresh() {
@@ -107,7 +108,7 @@ export default function RecentlySubmitted() {
       window.removeEventListener("focus", refreshOnFocus);
       window.clearInterval(timer);
     };
-  }, [attempt]);
+  }, [attempt, authenticated]);
 
   async function update(submission: Submission, minutes: number | null) {
     if (saving.current) return;
@@ -149,17 +150,20 @@ export default function RecentlySubmitted() {
   const submissions = snapshot?.submissions.filter(({ timestamp }) => timestamp >= now - windowMs) ?? [];
   const failedCourses = snapshot?.failedCourses ?? 0;
 
-  return <section aria-labelledby="recently-submitted-title">
-    <Card className="gap-3 rounded-xl border border-border/80 bg-card/60 p-4 sm:p-5">
-      <h2 id="recently-submitted-title" className="text-base font-semibold">Recently Submitted</h2>
-      {!snapshot && !loadError && <LoadingState className="min-h-24 py-4">Checking recent submissions…</LoadingState>}
+  return <section aria-labelledby="recently-submitted-title" className="flex min-w-0 flex-col gap-3">
+    <h2 id="recently-submitted-title" className="text-lg font-semibold">Recently Submitted</h2>
+    <Card className="min-h-56 flex-1 gap-3 rounded-xl border border-border/80 bg-card/60 p-4 sm:p-5">
+      {(checking || (authenticated && !snapshot && !loadError)) &&
+        <LoadingState className="m-auto min-h-24 py-4">Checking recent submissions…</LoadingState>}
+      {!checking && !authenticated &&
+        <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Connect Canvas to see recent submissions.</p>}
       {(loadError || failedCourses > 0) && <div className="flex flex-wrap items-center gap-2 text-sm">
         <p role="alert" className="text-muted-foreground">{loadError ? "Couldn’t check recent submissions."
           : `Couldn’t check submissions for ${failedCourses} ${failedCourses === 1 ? "course" : "courses"}.`}</p>
         <Button type="button" variant="outline" disabled={pending !== undefined} onClick={() => setAttempt((value) => value + 1)}>Retry</Button>
       </div>}
       {snapshot && !loadError && failedCourses === 0 && submissions.length === 0 &&
-        <p className="text-sm text-muted-foreground">Nothing here</p>}
+        <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Nothing here</p>}
       <p role="status" className="sr-only">{status}</p>
       {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
       {submissions.length > 0 && <ul className="divide-y divide-border/70">

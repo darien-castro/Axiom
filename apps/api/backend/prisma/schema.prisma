@@ -19,6 +19,15 @@ model CourseCreditHours {
   @@map("course_credit_hours")
 }
 
+model GpaTranscriptTotals {
+  studentKey    Bytes  @id @map("student_key")
+  semesterKey   String @map("semester_key")
+  gpaHours      Float  @map("gpa_hours")
+  qualityPoints Float  @map("quality_points")
+
+  @@map("gpa_transcript_totals")
+}
+
 model HiddenCourse {
   studentKey Bytes  @map("student_key")
   courseId   String @map("course_id")

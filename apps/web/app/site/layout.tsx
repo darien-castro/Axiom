@@ -19,7 +19,7 @@ import { applyTheme, getSavedTheme, getSavedAppearanceMode, systemAppearanceQuer
 
 const navItems = [
   {
-    name: "Overview (Dashboard)",
+    name: "Dashboard",
     shortName: "Overview",
     href: "/site/dashboard",
     icon: DashboardSquare01Icon,

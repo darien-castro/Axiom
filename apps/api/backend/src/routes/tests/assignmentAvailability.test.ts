@@ -11,6 +11,8 @@ import meRoute from '../me';
 const sessions = new Map<string, string>();
 const workloadDb = vi.hoisted(() => ({
   saveCourseCreditHours: vi.fn(),
+  getGpaTranscriptTotals: vi.fn(),
+  saveGpaSetup: vi.fn(),
   saveAssignmentTimeReport: vi.fn(),
   saveCourseVisibility: vi.fn(),
   getHiddenCourses: vi.fn(),
@@ -268,6 +270,38 @@ test('returns active Canvas courses and restricts workload writes to the student
 
   expect(await (await put('42/visibility', { hidden: false })).json()).toEqual({ hidden: false });
   expect(workloadDb.saveCourseVisibility).toHaveBeenCalledWith('100', '42', false);
+});
+
+test('loads and saves GPA setup for the signed-in student and rejects invalid inputs', async () => {
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/users/self`) return Response.json({ id: 100 });
+    expect(String(url)).toContain('enrollment_state=active&enrollment_type=student');
+    return Response.json([{ id: 42, name: 'Database Design' }]);
+  });
+  const cookie = await signIn('student-a');
+  const transcript = { semesterKey: 'Fall 2026', gpaHours: 30, qualityPoints: 102 };
+  const credits = [{ courseId: '42', creditHours: 3 }];
+  workloadDb.getGpaTranscriptTotals.mockResolvedValueOnce(transcript);
+
+  const response = await localFetch(`${apiUrl}/workload/courses?includeGpaTranscript=true`, { headers: { Cookie: cookie } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ gpaTranscript: transcript, courses: [{ courseId: '42', creditHours: 3.5 }] });
+  expect(workloadDb.getGpaTranscriptTotals).toHaveBeenCalledWith('100');
+
+  function put(payload: object) {
+    return localFetch(`${apiUrl}/workload/gpa-setup`, {
+      method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+  }
+
+  expect((await put({ credits: [{ courseId: '99', creditHours: 3 }] })).status).toBe(400);
+  expect((await put({ credits, transcript: { ...transcript, gpaHours: 0 } })).status).toBe(400);
+  expect(workloadDb.saveGpaSetup).not.toHaveBeenCalled();
+
+  const saved = await put({ credits, transcript });
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toEqual({ credits, transcript });
+  expect(workloadDb.saveGpaSetup).toHaveBeenCalledWith('100', credits, transcript);
 });
 
 test('scopes assignment dismissals and effort report removal to the signed-in student', async () => {
