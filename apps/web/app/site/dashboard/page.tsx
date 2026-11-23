@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Tabs } from "@base-ui/react/tabs";
 import {
   GraduationCapIcon,
   Calendar03Icon,
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState } from "@/components/ui/loading-state";
 import RecentlySubmitted from "./recently-submitted";
+import SemesterGpa from "./semester-gpa";
 
 interface CourseInfo {
   courseID: string;
@@ -58,6 +60,9 @@ interface RealAssignment {
   assignmentType?: string;
   assignmentPoints?: number | null;
 }
+
+const gpaTabClassName =
+  "rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring data-active:bg-background data-active:text-foreground data-active:shadow-xs";
 
 function formatSemesterTerm(term?: string): string {
   if (!term || term.trim() === "") return "Current Semester";
@@ -196,7 +201,7 @@ export default function DashboardPage() {
     }
   }
 
-  const primaryTerm = courses.find((c) => c.courseTerm && c.courseTerm.trim().length > 0)?.courseTerm;
+  const primaryTerm = courses.find((course) => course.courseTerm?.trim())?.courseTerm;
   const activeSemester = primaryTerm ? formatSemesterTerm(primaryTerm) : "Fall 2026";
   const enrolledCount = courses.length;
 
@@ -353,75 +358,39 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {/* 1. PROJECTED GPA PLACEHOLDER RECTANGLE */}
       <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <HugeiconsIcon
-              icon={GraduationCapIcon}
-              strokeWidth={2}
-              className="size-5 text-emerald-600 dark:text-emerald-400"
-            />
-            <h2 className="text-lg font-semibold text-foreground">
-              Projected GPA
-            </h2>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            Predictive Model Simulation
-          </span>
+        <div className="flex items-center gap-2">
+          <HugeiconsIcon
+            icon={GraduationCapIcon}
+            strokeWidth={2}
+            className="size-5 text-emerald-600 dark:text-emerald-400"
+          />
+          <h2 id="projected-gpa-heading" className="text-lg font-semibold text-foreground">
+            Projected GPA
+          </h2>
         </div>
 
-        {/* Placeholder Rectangle with live connection indicators */}
-        <div className="relative w-full rounded-2xl border-2 border-dashed border-border/90 bg-card/40 p-8 md:p-10 transition-all hover:bg-card/60">
-          <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto gap-4 py-6">
-            <div className="size-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <HugeiconsIcon
-                icon={GraduationCapIcon}
-                strokeWidth={2}
-                className="size-6 text-emerald-600 dark:text-emerald-400"
-              />
-            </div>
+        <Card className="rounded-xl border border-border/80 p-5 shadow-xs">
+          <Tabs.Root defaultValue="semester" className="flex flex-col gap-4">
+            <Tabs.List
+              aria-labelledby="projected-gpa-heading"
+              className="inline-flex self-start gap-1 rounded-lg bg-muted p-1"
+            >
+              <Tabs.Tab value="semester" className={gpaTabClassName}>Semester GPA</Tabs.Tab>
+              <Tabs.Tab value="overall" className={gpaTabClassName}>Overall GPA</Tabs.Tab>
+            </Tabs.List>
 
-            <div>
-              <h3 className="text-base md:text-lg font-semibold text-foreground">
-                [ Projected GPA Placeholder Rectangle ]
-              </h3>
-              <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                Visual interactive chart / gauge calculating estimated cumulative and semester GPA based on live grades and remaining coursework weight.
+            <Tabs.Panel value="semester" keepMounted className="rounded-md focus-visible:outline-2 focus-visible:outline-ring">
+              <SemesterGpa />
+            </Tabs.Panel>
+
+            <Tabs.Panel value="overall" className="rounded-md focus-visible:outline-2 focus-visible:outline-ring">
+              <p className="text-sm text-muted-foreground">
+                Overall GPA projection will use prior transcript GPA hours and quality points alongside the semester totals.
               </p>
-            </div>
-
-            {/* Necessary Data Requirements Callout */}
-            <div className="w-full mt-3 rounded-xl border border-border bg-card p-4 text-left shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-semibold text-foreground mb-2.5">
-                <HugeiconsIcon
-                  icon={InformationCircleIcon}
-                  strokeWidth={2}
-                  className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0"
-                />
-                <span>Data Necessary for Implementation:</span>
-              </div>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">•</span>
-                  <span><strong>Cumulative GPA:</strong> Past transcript credits & quality points</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">•</span>
-                  <span><strong>Credit Hours:</strong> Weight per course ({enrolledCount > 0 ? `${enrolledCount} active courses detected` : "e.g. 3 or 4 credits"})</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">•</span>
-                  <span><strong>Current Class Grades:</strong> {gradeMap.size > 0 ? `${gradeMap.size} in-progress averages synced` : "In-progress weighted averages from Canvas"}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">•</span>
-                  <span><strong>Remaining Assignment Weight:</strong> Uncompleted % in active syllabi</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+            </Tabs.Panel>
+          </Tabs.Root>
+        </Card>
       </section>
 
       {/* 2. SCROLLING DOWN -> NEXT IMPORTANT ASSIGNMENT (LARGE) */}
