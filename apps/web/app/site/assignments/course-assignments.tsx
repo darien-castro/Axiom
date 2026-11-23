@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import AssignmentDeadline, { useDeadlineClock } from "@/components/custom/AssignmentDeadline";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -261,7 +262,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
     {dismissalError && <p role="alert" className="mb-3 text-sm text-destructive">{dismissalError.message}</p>}
     {focusError && <p role="alert" className="text-sm text-destructive">{focusError}</p>}
 
-    {state.status === "loading" && <p role="status" className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{demo ? "Loading sample assignments…" : "Loading Canvas assignments…"}</p>}
+    {state.status === "loading" && <LoadingState>{demo ? "Loading sample assignments…" : "Loading Canvas assignments…"}</LoadingState>}
     {state.status === "signed-out" && <div className="rounded-xl border border-border bg-card p-5">
       <h2 className="font-semibold">Connect Canvas to see your assignments</h2>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">

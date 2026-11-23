@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import AssignmentDeadline, { useDeadlineClock } from "@/components/custom/AssignmentDeadline";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,7 +20,7 @@ const pressureLabels = ["Stable", "Busy", "Overloaded"] as const;
 const pressureClasses = { Stable: styles.stable, Busy: styles.busy, Overloaded: styles.overloaded, Unknown: styles.unknown };
 
 export default function CoursesPage() {
-  return <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading courses…</p>}>
+  return <Suspense fallback={<LoadingState>Loading courses…</LoadingState>}>
     <CoursesView />
   </Suspense>;
 }
@@ -115,7 +116,7 @@ function CourseWorkload({ demo }: { demo: boolean }) {
         </ul>
       </header>
 
-      {state.status === "loading" && <div className={styles.notice} role="status">Fetching, please wait...</div>}
+      {state.status === "loading" && <LoadingState>Fetching, please wait...</LoadingState>}
       {state.status === "signed-out" && <div className={styles.notice}>
         <h2>Connect Canvas to see your courses</h2>
         <p>Sign in to view your deadlines, credits, and weekly workload.</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -151,7 +152,7 @@ export default function RecentlySubmitted() {
   return <section aria-labelledby="recently-submitted-title">
     <Card className="gap-3 rounded-xl border border-border/80 bg-card/60 p-4 sm:p-5">
       <h2 id="recently-submitted-title" className="text-base font-semibold">Recently Submitted</h2>
-      {!snapshot && !loadError && <p role="status" className="text-sm text-muted-foreground">Checking recent submissions…</p>}
+      {!snapshot && !loadError && <LoadingState className="min-h-24 py-4">Checking recent submissions…</LoadingState>}
       {(loadError || failedCourses > 0) && <div className="flex flex-wrap items-center gap-2 text-sm">
         <p role="alert" className="text-muted-foreground">{loadError ? "Couldn’t check recent submissions."
           : `Couldn’t check submissions for ${failedCourses} ${failedCourses === 1 ? "course" : "courses"}.`}</p>

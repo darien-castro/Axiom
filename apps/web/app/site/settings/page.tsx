@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import { Suspense, useState, useRef, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -76,7 +77,7 @@ function checkSessionSnapshot() {
 }
 
 export default function SettingsPage() {
-  return <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading settings…</p>}>
+  return <Suspense fallback={<LoadingState>Loading settings…</LoadingState>}>
     <SettingsView />
   </Suspense>;
 }

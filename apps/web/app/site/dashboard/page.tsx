@@ -12,14 +12,13 @@ import {
   Task01Icon,
   Book02Icon,
   CheckmarkCircle02Icon,
-  Loading03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingState } from "@/components/ui/loading-state";
 import RecentlySubmitted from "./recently-submitted";
 
 interface CourseInfo {
@@ -212,12 +211,7 @@ export default function DashboardPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {loading ? (
-              <Badge variant="outline" className="px-3 py-1 text-xs flex items-center gap-1.5">
-                <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-3 animate-spin" />
-                Loading semester...
-              </Badge>
-            ) : (
+            {!loading && (
               <>
                 <Badge variant="outline" className="px-3 py-1 text-xs">
                   Semester: {activeSemester}
@@ -306,7 +300,7 @@ export default function DashboardPage() {
           </span>
         </div>
 
-        {courses.length > 0 ? (
+        {loading ? <LoadingState>Loading semester...</LoadingState> : courses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {courses.map((course) => {
               const rawGrade = gradeMap.get(String(course.courseID));
@@ -355,31 +349,7 @@ export default function DashboardPage() {
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Card
-                key={`course-skeleton-${i}`}
-                className="border border-border/70 bg-card/60 p-5 rounded-xl flex flex-col justify-between gap-4"
-              >
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Skeleton className="h-5 w-20 rounded-full" />
-                    <Skeleton className="h-4 w-12 rounded" />
-                  </div>
-                  <Skeleton className="h-4 w-4/5 rounded mt-1" />
-                  <Skeleton className="h-4 w-3/5 rounded" />
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                  <div className="flex flex-col gap-1.5">
-                    <Skeleton className="h-2.5 w-16 rounded" />
-                    <Skeleton className="h-3.5 w-12 rounded" />
-                  </div>
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </div>
-              </Card>
-            ))}
-          </div>
+          <p className="text-sm text-muted-foreground">No courses to display.</p>
         )}
       </section>
 

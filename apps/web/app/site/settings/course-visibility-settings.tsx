@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
@@ -66,7 +67,7 @@ function CourseVisibilityEditor({ workload }: { workload: typeof canvasWorkload 
   }
 
   return <div className="text-sm">
-      {state.status === "loading" && <p role="status" className="text-muted-foreground">Loading courses…</p>}
+      {state.status === "loading" && <LoadingState className="min-h-24 py-4">Loading courses…</LoadingState>}
       {state.status === "signed-out" && <Link href="/" className="font-medium underline underline-offset-4">Sign in with Canvas to manage course visibility</Link>}
       {state.status === "error" && <div className="flex flex-wrap items-center gap-3">
         <p role="alert">Couldn’t load your courses.</p>
