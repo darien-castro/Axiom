@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import FocusConfirmation from "@/components/custom/focus/FocusConfirmation";
 import {
-  assignmentDeadline, isClosed, sortAssignments, type AssignmentView, type CourseAssignment,
+  assignmentDay, assignmentDeadline, groupAssignmentsByDay, isClosed, sortAssignments, type AssignmentView, type CourseAssignment,
 } from "@/lib/assignment-ranking";
 import {
   assignmentAvailability, assignmentIdentity, canvasWorkload, WorkloadRequestError,
@@ -40,8 +40,8 @@ type AssignmentState =
   };
 
 const views = [
+  { id: "deadline", label: "Due date", description: "Grouped by day. The assignment lock date is used when there’s no due date." },
   { id: "for-you", label: "For you", description: "Personalized for you based on your current grades, upcoming deadlines, points, and time commitment." },
-  { id: "deadline", label: "Due / lock date", description: "Soonest first. The assignment lock date is used when there’s no due date." },
   { id: "grade-weight", label: "Grade weight", description: "Highest estimated share of the final course grade first." },
   { id: "effort", label: "Duration", description: "Shortest reported time first. Work without estimates appears last." },
   { id: "semester", label: "Chronological", description: "Earliest to latest across the semester, including completed and closed work." },
@@ -60,7 +60,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   const workload = demo ? demoWorkload : canvasWorkload;
   const [state, setState] = useState<AssignmentState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
-  const [view, setView] = useState<WorkspaceView>("for-you");
+  const [view, setView] = useState<WorkspaceView>("deadline");
   const [search, setSearch] = useState("");
   const [whatIfScores, setWhatIfScores] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
@@ -220,6 +220,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   const searching = terms.length > 0;
   const showWholeList = searching || view === "semester" || view === "focus";
   const order = view === "semester" || view === "focus" ? "deadline" : view;
+  const AssignmentResults = order === "deadline" ? GroupedAssignmentList : AssignmentList;
   const scopedAssignments = view === "focus" ? assignments.filter(isFocused) : assignments;
   const activeAssignments = searching ? scopedAssignments.filter(({ assignmentName, course }) => {
     const searchableText = [assignmentName, course.courseName, course.courseCode].join(" ").toLocaleLowerCase();
@@ -253,7 +254,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Assignments</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{demo ? demoWorkloadLabel : "Find and prioritize work across your Canvas courses."}</p>
+        {/* <p className="mt-1 text-sm text-muted-foreground">{demo ? demoWorkloadLabel : ""}</p> */}
       </div>
       {state.status === "ready" && !courses.length && dismissed.length > 0 && dismissedDialog}
     </header>
@@ -319,7 +320,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
             <p role="alert">Work couldn’t be loaded for {failedCourses} {failedCourses === 1 ? "course" : "courses"}.</p>
             <Button type="button" variant="outline" disabled={saving.size > 0 || savingFocus.size > 0} onClick={retry}>Retry</Button>
           </div>}
-          {displayed.length ? <AssignmentList assignments={displayed} now={now} {...listActions} />
+          {displayed.length ? <AssignmentResults assignments={displayed} now={now} {...listActions} />
             : <p className="rounded-xl border border-border bg-card p-5 text-sm">
               {!filteredCourses.length ? "Select courses to see their assignments." : searching ? "No assignments match your search." : view === "focus"
                 ? "Use Add to Focus on any assignment to save it here." : view === "semester"
@@ -327,7 +328,7 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
             </p>}
           {archived.length > 0 && <details className="mt-6 md:mt-8">
             <summary className="cursor-pointer rounded-xl border border-border/80 bg-card px-4 py-3 text-sm font-medium">Completed and closed <span className="ml-1 text-xs text-muted-foreground">{archived.length}</span></summary>
-            <div className="mt-3"><AssignmentList assignments={archived} now={now} {...listActions} /></div>
+            <div className="mt-3"><AssignmentResults assignments={archived} now={now} {...listActions} /></div>
           </details>}
         </>}
       </Tabs.Panel>)}
@@ -386,7 +387,7 @@ type AssignmentActions = {
   onToggleFocus: (assignment: CourseAssignment, button: HTMLButtonElement) => void;
 };
 
-function AssignmentList({ assignments, now, reportedMinutes, focusedIds, savingFocus, saving, onEstimate, onDismiss, onToggleFocus, whatIfScores, onWhatIfScore }: AssignmentActions & {
+type AssignmentListProps = AssignmentActions & {
   assignments: CourseAssignment[];
   now: number;
   reportedMinutes: ReadonlyMap<string, number>;
@@ -395,7 +396,33 @@ function AssignmentList({ assignments, now, reportedMinutes, focusedIds, savingF
   saving: ReadonlySet<string>;
   whatIfScores: Readonly<Record<string, number>>;
   onWhatIfScore: (key: string, score: number) => void;
-}) {
+};
+
+const calendarDay = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
+const monthDay = new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric" });
+
+function GroupedAssignmentList({ assignments, now, ...actions }: AssignmentListProps) {
+  const today = assignmentDay(now);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  return <div className="grid gap-6 md:gap-8">
+    {Array.from(groupAssignmentsByDay(assignments), ([day, entries]) => {
+      const relative = day === today ? "Today" : day === tomorrow.getTime() ? "Tomorrow" : null;
+
+      return <section key={day ?? "undated"} className="grid gap-3">
+        <h3 className="border-b border-border/60 pb-2 text-base font-semibold">
+          {day === null ? "No due or lock date" : relative ? <>
+            {relative}<span className="ml-2 text-sm font-normal text-muted-foreground">{monthDay.format(day)}</span>
+          </> : calendarDay.format(day)}
+        </h3>
+        <AssignmentList assignments={entries} now={now} {...actions} />
+      </section>;
+    })}
+  </div>;
+}
+
+function AssignmentList({ assignments, now, reportedMinutes, focusedIds, savingFocus, saving, onEstimate, onDismiss, onToggleFocus, whatIfScores, onWhatIfScore }: AssignmentListProps) {
   return <ul className="grid gap-3.5">
     {assignments.map((assignment) => {
       const key = assignmentIdentity(assignment.course.courseId, assignment.assignmentId);

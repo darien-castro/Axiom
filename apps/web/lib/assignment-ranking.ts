@@ -11,6 +11,22 @@ export function assignmentDeadline(assignment: WorkloadAssignment) {
     : { date: null, timestamp: Infinity, label: "" };
 }
 
+export function assignmentDay(timestamp: number): number {
+  return new Date(timestamp).setHours(0, 0, 0, 0);
+}
+
+export function groupAssignmentsByDay(assignments: CourseAssignment[]) {
+  const groups = new Map<number | null, CourseAssignment[]>();
+  for (const assignment of assignments) {
+    const { timestamp } = assignmentDeadline(assignment);
+    const day = Number.isFinite(timestamp) ? assignmentDay(timestamp) : null;
+    const group = groups.get(day);
+    if (group) group.push(assignment);
+    else groups.set(day, [assignment]);
+  }
+  return groups;
+}
+
 export function isClosed(assignment: WorkloadAssignment, now: number): boolean {
   return Boolean(assignment.availableUntil && Date.parse(assignment.availableUntil) <= now);
 }
