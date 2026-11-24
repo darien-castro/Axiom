@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingState } from "@/components/ui/loading-state";
 import AssignmentDeadline, { useDeadlineClock } from "@/components/custom/AssignmentDeadline";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -10,6 +11,7 @@ import {
   type WorkloadAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
 import { demoWorkload, demoWorkloadLabel } from "@/lib/demo-workload";
+import BubbleField from "./bubble-field";
 import styles from "./workload.module.css";
 
 type CourseRow = WorkloadCourse & { assignments: WorkloadAssignment[] | null };
@@ -19,7 +21,7 @@ const pressureLabels = ["Stable", "Busy", "Overloaded"] as const;
 const pressureClasses = { Stable: styles.stable, Busy: styles.busy, Overloaded: styles.overloaded, Unknown: styles.unknown };
 
 export default function CoursesPage() {
-  return <Suspense fallback={<p className="p-6 text-sm text-muted-foreground">Loading courses…</p>}>
+  return <Suspense fallback={<LoadingState>Loading courses…</LoadingState>}>
     <CoursesView />
   </Suspense>;
 }
@@ -110,12 +112,9 @@ function CourseWorkload({ demo }: { demo: boolean }) {
           <h1>Courses</h1>
           {demo && <p>{demoWorkloadLabel}</p>}
         </div>
-        <ul className={styles.legend} aria-label="Deadline pressure legend">
-          {pressureLabels.map((label) => <li key={label} className={pressureClasses[label]}><span />{label}</li>)}
-        </ul>
       </header>
 
-      {state.status === "loading" && <div className={styles.notice} role="status">Fetching, please wait...</div>}
+      {state.status === "loading" && <LoadingState>Fetching, please wait...</LoadingState>}
       {state.status === "signed-out" && <div className={styles.notice}>
         <h2>Connect Canvas to see your courses</h2>
         <p>Sign in to view your deadlines, credits, and weekly workload.</p>
@@ -156,13 +155,13 @@ function CourseWorkload({ demo }: { demo: boolean }) {
       {selected && <>
         <div className={styles.workspace}>
           <section className={styles.map} aria-labelledby="workload-map-title">
-            <header><h2 id="workload-map-title">Workload map</h2><p>Bubble size reflects credit hours. Select a course for details.</p></header>
-            <div className={styles.bubbles}>
+            {/* <header><h2 id="workload-map-title">Workload map</h2><p>Bubble size reflects credit hours. Drag bubbles to move them, or select a course for details.</p></header> */}
+            <BubbleField layoutKey={JSON.stringify(visibleRows.map(({ courseId }) => courseId))}>
               {visibleRows.map((course) => {
                 const isSelected = course.courseId === selected.courseId;
                 const size = course.creditHours === null ? 10.75 : Math.min(15, 9 + 2.35 * Math.sqrt(course.creditHours));
                 return <button type="button" key={course.courseId} onClick={() => selectCourse(course.courseId)}
-                  aria-pressed={isSelected} aria-controls="course-detail"
+                  title={course.courseName} aria-pressed={isSelected} aria-controls="course-detail"
                   className={`${styles.bubble} ${pressureClasses[course.summary?.pressure ?? "Unknown"]}`}
                   style={{ "--bubble-size": `${size}rem`, "--bubble-ratio": size / 15 } as CSSProperties}>
                   <span className={styles.deadlineChip}>{course.summary ? `${course.summary.dueSoon} due soon` : "Dates unavailable"}</span>
@@ -171,7 +170,7 @@ function CourseWorkload({ demo }: { demo: boolean }) {
                   <span className={styles.bubbleGrade}>{course.gradeLetter ?? (course.gradeScore === null ? "" : `${course.gradeScore.toFixed(1)}%`)}</span>
                 </button>;
               })}
-            </div>
+            </BubbleField>
           </section>
 
           <aside id="course-detail" tabIndex={-1} className={`${styles.detail} ${pressureClasses[selected.summary?.pressure ?? "Unknown"]}`} aria-labelledby="course-detail-title">

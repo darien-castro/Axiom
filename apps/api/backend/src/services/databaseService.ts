@@ -1,4 +1,5 @@
 import prisma from './db';
+import type { Prisma } from '@prisma/client';
 import crypto, { decryptValue, encryptValue } from '../crypto/crypto';
 
 export interface UserInfo {
@@ -21,6 +22,12 @@ export interface GradeInfo {
   userID: string;
   courseID: string;
   grade: string;
+}
+
+export interface GpaTranscriptTotals {
+  semesterKey: string;
+  gpaHours: number;
+  qualityPoints: number;
 }
 
 export interface AssignmentTimeEstimate {
@@ -182,6 +189,13 @@ export class DatabaseService {
         PRIMARY KEY (student_key, course_id)
       )`;
     await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS gpa_transcript_totals (
+        student_key BYTEA PRIMARY KEY,
+        semester_key TEXT NOT NULL,
+        gpa_hours DOUBLE PRECISION NOT NULL CHECK (gpa_hours >= 0),
+        quality_points DOUBLE PRECISION NOT NULL CHECK (quality_points >= 0 AND quality_points <= gpa_hours * 4)
+      )`;
+    await prisma.$executeRaw`
       CREATE TABLE IF NOT EXISTS hidden_courses (
         student_key BYTEA NOT NULL,
         course_id TEXT NOT NULL,
@@ -220,11 +234,33 @@ export class DatabaseService {
       FROM course_credit_hours WHERE student_key = ${userKey(userID)}`;
   }
 
-  async saveCourseCreditHours(userID: string, courseID: string, creditHours: number) {
-    await prisma.$executeRaw`
+  async saveCourseCreditHours(userID: string, courseID: string, creditHours: number, client: Prisma.TransactionClient = prisma) {
+    await client.$executeRaw`
       INSERT INTO course_credit_hours (student_key, course_id, credit_hours)
       VALUES (${userKey(userID)}, ${courseID}, ${creditHours})
       ON CONFLICT (student_key, course_id) DO UPDATE SET credit_hours = EXCLUDED.credit_hours`;
+  }
+
+  async getGpaTranscriptTotals(userID: string) {
+    const [transcript] = await prisma.$queryRaw<GpaTranscriptTotals[]>`
+      SELECT semester_key AS "semesterKey", gpa_hours AS "gpaHours", quality_points AS "qualityPoints"
+      FROM gpa_transcript_totals WHERE student_key = ${userKey(userID)}`;
+    return transcript ?? null;
+  }
+
+  async saveGpaSetup(userID: string, credits: { courseId: string; creditHours: number }[], transcript?: GpaTranscriptTotals) {
+    await prisma.$transaction(async (transaction) => {
+      for (const { courseId, creditHours } of credits) {
+        await this.saveCourseCreditHours(userID, courseId, creditHours, transaction);
+      }
+      if (transcript) {
+        await transaction.$executeRaw`
+          INSERT INTO gpa_transcript_totals (student_key, semester_key, gpa_hours, quality_points)
+          VALUES (${userKey(userID)}, ${transcript.semesterKey}, ${transcript.gpaHours}, ${transcript.qualityPoints})
+          ON CONFLICT (student_key) DO UPDATE SET semester_key = EXCLUDED.semester_key,
+            gpa_hours = EXCLUDED.gpa_hours, quality_points = EXCLUDED.quality_points`;
+      }
+    });
   }
 
   async getHiddenCourses(userID: string) {

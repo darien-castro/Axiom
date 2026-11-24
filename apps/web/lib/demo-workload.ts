@@ -98,11 +98,13 @@ async function getAssignments(courseId: string): Promise<{ assignments: Rankable
     assignmentName: assignment.title,
     availableFrom: null,
     dueAt: assignment.dueAt,
+    submittedAt: null,
     availableUntil: assignment.availableUntil ?? null,
     lockedForUser: null,
     outstanding: true,
     pointsPossible: assignment.pointsPossible,
     gradeImpactPercent: null,
+    gradeProjection: null,
     submissionGrade: null,
     ...estimate(assignment, reportedMinutes(assignment, saved)),
   })) };

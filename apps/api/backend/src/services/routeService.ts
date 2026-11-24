@@ -9,7 +9,7 @@ import {
   CanvasEnrollment,
 } from '../client/canvasclient';
 import db, { CourseInfo, GradeInfo, UserInfo } from './databaseService';
-import { calculateGradeImpact } from './assignmentGradeImpact';
+import { calculateGradeImpact, calculateGradeProjections } from './assignmentGradeImpact';
 import mapper, {
   CleanCourse,
   CleanCourseAssignment,
@@ -259,11 +259,13 @@ export async function userRequestedAssignmentAvailability(apiKey: string, course
   ]);
   const estimates = new Map(timeEstimates.map((estimate) => [estimate.assignmentId, estimate]));
   const gradeImpact = gradeMetadata ? calculateGradeImpact(...gradeMetadata, assignments) : null;
+  const gradeProjections = gradeMetadata ? calculateGradeProjections(...gradeMetadata, assignments) : null;
   return assignments.map((assignment) => ({
     assignmentId: String(assignment.id),
     assignmentName: assignment.name,
     availableFrom: assignment.unlock_at ?? null,
     dueAt: assignment.due_at ?? null,
+    submittedAt: assignment.submission?.submitted_at ?? null,
     availableUntil: assignment.lock_at ?? null,
     lockedForUser: assignment.locked_for_user ?? null,
     outstanding: isAssignmentOutstanding(assignment),
@@ -272,6 +274,7 @@ export async function userRequestedAssignmentAvailability(apiKey: string, course
     ...(includeGradeImpact ? {
       pointsPossible: assignment.points_possible ?? null,
       gradeImpactPercent: gradeImpact?.get(String(assignment.id)) ?? null,
+      gradeProjection: gradeProjections?.get(String(assignment.id)) ?? null,
       submissionGrade: getVisibleSubmissionGrade(assignment.submission),
     } : {}),
   }));

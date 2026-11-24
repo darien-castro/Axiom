@@ -41,16 +41,17 @@ function studentRoute<Params extends Partial<CourseParams>>(
 
 router.get('/workload/courses', authenticateSession, studentRoute(async (req, res, { studentId, courses }) => {
   const includeAssignmentPreferences = req.query.includeAssignmentPreferences === 'true';
-  const [creditRows, hiddenRows, dismissedAssignments, timeReports, focusedAssignments] = await Promise.all([
+  const [creditRows, hiddenRows, dismissedAssignments, timeReports, focusedAssignments, gpaTranscript] = await Promise.all([
     db.getCourseCreditHours(studentId),
     db.getHiddenCourses(studentId),
     includeAssignmentPreferences ? db.getDismissedAssignments(studentId) : undefined,
     includeAssignmentPreferences ? db.getStudentTimeReports(studentId) : undefined,
     includeAssignmentPreferences ? db.getFocusedAssignments(studentId) : undefined,
+    req.query.includeGpaTranscript === 'true' ? db.getGpaTranscriptTotals(studentId) : undefined,
   ]);
   const credits = new Map(creditRows.map((course) => [course.courseId, course.creditHours]));
   const hidden = new Set(hiddenRows.map((course) => course.courseId));
-  res.json({ dismissedAssignments, timeReports, focusedAssignments, courses: courses.map((course) => {
+  res.json({ dismissedAssignments, timeReports, focusedAssignments, gpaTranscript, courses: courses.map((course) => {
     const courseId = String(course.id);
     const [clean] = cleanCourses([course]);
     const student = course.enrollments?.find((enrollment) => enrollment.type === 'student' || enrollment.type === 'StudentEnrollment');
@@ -66,6 +67,34 @@ router.get('/workload/courses', authenticateSession, studentRoute(async (req, re
       canvasUrl: `${canvasBaseUrl}/courses/${encodeURIComponent(courseId)}`,
     };
   }) });
+}));
+
+function isNonnegativeNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+router.put('/workload/gpa-setup', authenticateSession, studentRoute(async (req, res, { studentId, courses }) => {
+  const { credits, transcript } = req.body ?? {};
+  const activeCourseIds = new Set(courses.map(({ id }) => String(id)));
+  if (!Array.isArray(credits) || credits.length > activeCourseIds.size || credits.some((entry) =>
+    !activeCourseIds.has(entry?.courseId) || !isNonnegativeNumber(entry?.creditHours)
+  ) || new Set(credits.map(({ courseId }) => courseId)).size !== credits.length) {
+    res.status(400).json({ error: 'Enter valid credit hours for each active course.' });
+    return;
+  }
+
+  if (transcript !== undefined && (
+    typeof transcript?.semesterKey !== 'string' || !transcript.semesterKey.trim() ||
+    transcript.semesterKey.length > 2048 || !isNonnegativeNumber(transcript.gpaHours) ||
+    !isNonnegativeNumber(transcript.qualityPoints) || transcript.qualityPoints > transcript.gpaHours * 4
+  )) {
+    res.status(400).json({ error: 'Check the prior GPA hours and quality points against your transcript.' });
+    return;
+  }
+
+  credits.sort((a, b) => a.courseId.localeCompare(b.courseId));
+  await db.saveGpaSetup(studentId, credits, transcript);
+  res.json({ credits, transcript });
 }));
 
 router.put('/workload/assignments/focus', authenticateSession, studentRoute(async (req, res, { canvas, studentId, courses }) => {

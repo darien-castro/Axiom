@@ -12,6 +12,17 @@ export interface WorkloadCourse {
   canvasUrl: string | null;
 }
 
+export type GpaTranscriptTotals = {
+  semesterKey: string;
+  gpaHours: number;
+  qualityPoints: number;
+};
+
+export type GpaSetup = {
+  credits: { courseId: string; creditHours: number }[];
+  transcript?: GpaTranscriptTotals;
+};
+
 export interface TimeEstimate {
   estimatedMinutes: number | null;
   reportCount: number;
@@ -22,6 +33,7 @@ export interface WorkloadAssignment extends TimeEstimate {
   assignmentName: string;
   availableFrom: string | null;
   dueAt: string | null;
+  submittedAt: string | null;
   availableUntil: string | null;
   lockedForUser: boolean | null;
   outstanding: boolean;
@@ -30,6 +42,7 @@ export interface WorkloadAssignment extends TimeEstimate {
 export interface RankableAssignment extends WorkloadAssignment {
   pointsPossible: number | null;
   gradeImpactPercent: number | null;
+  gradeProjection: { gradeAtZero: number; percentPerPoint: number } | null;
   submissionGrade: { label: string | null; score: number | null } | null;
 }
 
@@ -69,6 +82,12 @@ export function getWorkloadCourses(signal: AbortSignal) {
   return request<{ courses: WorkloadCourse[] }>("/workload/courses", { signal });
 }
 
+export function getGpaCourses(signal: AbortSignal) {
+  return request<{ courses: WorkloadCourse[]; gpaTranscript: GpaTranscriptTotals | null }>(
+    "/workload/courses?includeGpaTranscript=true", { signal },
+  );
+}
+
 export function getAssignmentWorkspace(signal: AbortSignal) {
   return request<{
     courses: WorkloadCourse[];
@@ -96,6 +115,10 @@ function put<T>(path: string, body: object) {
 
 export function saveWorkloadCredits(courseId: string, creditHours: number) {
   return put<{ creditHours: number }>(`/workload/courses/${encodeURIComponent(courseId)}/credits`, { creditHours });
+}
+
+export function saveGpaSetup(setup: GpaSetup) {
+  return put<GpaSetup>("/workload/gpa-setup", setup);
 }
 
 export function saveCourseVisibility(courseId: string, hidden: boolean) {

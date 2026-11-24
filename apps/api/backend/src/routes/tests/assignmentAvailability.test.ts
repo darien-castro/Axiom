@@ -11,6 +11,8 @@ import meRoute from '../me';
 const sessions = new Map<string, string>();
 const workloadDb = vi.hoisted(() => ({
   saveCourseCreditHours: vi.fn(),
+  getGpaTranscriptTotals: vi.fn(),
+  saveGpaSetup: vi.fn(),
   saveAssignmentTimeReport: vi.fn(),
   saveCourseVisibility: vi.fn(),
   getHiddenCourses: vi.fn(),
@@ -143,7 +145,8 @@ test.each([
   const response = await localFetch(`${apiUrl}/courses/42/assignments/availability?gradeImpact=true`, { headers: { 'X-API-Key': 'student-a' } });
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ assignments: [
-    { assignmentId: '7', pointsPossible: 50, gradeImpactPercent: expected, estimatedMinutes: 75 },
+    { assignmentId: '7', pointsPossible: 50, gradeImpactPercent: expected, estimatedMinutes: 75,
+      gradeProjection: dropLowest ? null : expect.any(Object) },
     { assignmentId: '8', outstanding: false },
     { assignmentId: '9', gradeImpactPercent: null },
     { assignmentId: '10', gradeImpactPercent: null },
@@ -169,7 +172,7 @@ test('returns all pages with separate effective dates for each signed-in student
       due_at: authorization === 'Bearer student-a' ? '2026-11-20T23:00:00Z' : '2026-11-22T23:00:00Z',
       lock_at: '2026-11-23T23:00:00Z',
       locked_for_user: false,
-      submission: { workflow_state: 'graded', missing: true },
+      submission: { workflow_state: 'graded', missing: true, submitted_at: '2026-11-20T21:00:00Z' },
     }], { headers: { Link: `<${firstPage}>; rel="current", <${secondPage}>; rel="next"` } });
   });
 
@@ -187,11 +190,13 @@ test('returns all pages with separate effective dates for each signed-in student
     {
       assignmentId: '7', assignmentName: 'Lab report', availableFrom: '2026-11-19T15:00:00Z',
       dueAt: '2026-11-20T23:00:00Z', availableUntil: '2026-11-23T23:00:00Z', lockedForUser: false,
+      submittedAt: '2026-11-20T21:00:00Z',
       outstanding: true, estimatedMinutes: 75, reportCount: 3,
     },
     {
       assignmentId: '8', assignmentName: 'No dates', availableFrom: null,
       dueAt: null, availableUntil: null, lockedForUser: true,
+      submittedAt: null,
       outstanding: false, estimatedMinutes: null, reportCount: 0,
     },
   ] });
@@ -265,6 +270,38 @@ test('returns active Canvas courses and restricts workload writes to the student
 
   expect(await (await put('42/visibility', { hidden: false })).json()).toEqual({ hidden: false });
   expect(workloadDb.saveCourseVisibility).toHaveBeenCalledWith('100', '42', false);
+});
+
+test('loads and saves GPA setup for the signed-in student and rejects invalid inputs', async () => {
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/users/self`) return Response.json({ id: 100 });
+    expect(String(url)).toContain('enrollment_state=active&enrollment_type=student');
+    return Response.json([{ id: 42, name: 'Database Design' }]);
+  });
+  const cookie = await signIn('student-a');
+  const transcript = { semesterKey: 'Fall 2026', gpaHours: 30, qualityPoints: 102 };
+  const credits = [{ courseId: '42', creditHours: 3 }];
+  workloadDb.getGpaTranscriptTotals.mockResolvedValueOnce(transcript);
+
+  const response = await localFetch(`${apiUrl}/workload/courses?includeGpaTranscript=true`, { headers: { Cookie: cookie } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ gpaTranscript: transcript, courses: [{ courseId: '42', creditHours: 3.5 }] });
+  expect(workloadDb.getGpaTranscriptTotals).toHaveBeenCalledWith('100');
+
+  function put(payload: object) {
+    return localFetch(`${apiUrl}/workload/gpa-setup`, {
+      method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+  }
+
+  expect((await put({ credits: [{ courseId: '99', creditHours: 3 }] })).status).toBe(400);
+  expect((await put({ credits, transcript: { ...transcript, gpaHours: 0 } })).status).toBe(400);
+  expect(workloadDb.saveGpaSetup).not.toHaveBeenCalled();
+
+  const saved = await put({ credits, transcript });
+  expect(saved.status).toBe(200);
+  expect(await saved.json()).toEqual({ credits, transcript });
+  expect(workloadDb.saveGpaSetup).toHaveBeenCalledWith('100', credits, transcript);
 });
 
 test('scopes assignment dismissals and effort report removal to the signed-in student', async () => {
@@ -356,4 +393,37 @@ test('loads the current Canvas profile and invalidates the session on sign out',
   expect(logout.status).toBe(204);
   expect(logout.headers.getSetCookie().some((value) => value.startsWith('AxiomCookie=;'))).toBe(true);
   expect((await localFetch(profileUrl, { headers })).status).toBe(401);
+});
+
+test.each([false, true])('projects the course grade with a hypothetical assignment score (weighted: %s)', async (weighted) => {
+  canvasFetch.mockImplementation(async (url) => {
+    if (url === `${canvasUrl}/courses/42?include[]=total_scores`) return Response.json({ apply_assignment_group_weights: weighted });
+    if (url === `${canvasUrl}/courses/42/assignment_groups?per_page=100`) {
+      return Response.json([{ id: 1, group_weight: 40 }, { id: 2, group_weight: 60 }]);
+    }
+    expect(url).toBe(firstPage);
+    return Response.json([
+      { id: 1, assignment_group_id: 1, points_possible: 100, muted: true,
+        submission: { workflow_state: 'graded', score: 80, posted_at: '2026-11-20T12:00:00Z' } },
+      { id: 2, assignment_group_id: 1, points_possible: 100 },
+      { id: 3, assignment_group_id: 2, points_possible: 50, muted: true },
+      { id: 4, assignment_group_id: 2, points_possible: 100, submission: { workflow_state: 'graded', score: 100, posted_at: null } },
+      { id: 5, assignment_group_id: 1, points_possible: 50, submission: { excused: true } },
+      { id: 6, assignment_group_id: 1, points_possible: 100, muted: true, submission: { workflow_state: 'graded', score: 100 } },
+    ]);
+  });
+
+  const response = await localFetch(`${apiUrl}/courses/42/assignments/availability?gradeImpact=true`, { headers: { 'X-API-Key': 'student-a' } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ assignments: [
+    { gradeProjection: { gradeAtZero: 0, percentPerPoint: 1 } },
+    { gradeProjection: { gradeAtZero: 40, percentPerPoint: 0.5 } },
+    { gradeProjection: {
+      gradeAtZero: expect.closeTo(weighted ? 32 : 80 / 150 * 100),
+      percentPerPoint: expect.closeTo(weighted ? 1.2 : 100 / 150),
+    } },
+    { assignmentId: '4' },
+    { gradeProjection: null },
+    { assignmentId: '6' },
+  ] });
 });
