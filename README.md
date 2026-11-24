@@ -1,4 +1,4 @@
-# Axiom (OAuth 2.0)
+# Axiom
 
 Axiom connects to Canvas LMS and helps students decide which assignments matter most for their grades. It is designed to compute:
 
