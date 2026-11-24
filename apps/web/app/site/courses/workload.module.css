@@ -73,6 +73,7 @@
 .map header p { margin-top: .25rem; font-size: .8rem; color: var(--muted-foreground); }
 
 .bubbles {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -83,6 +84,9 @@
   padding-block: 1.7rem .7rem;
 }
 
+.bubbles[data-entering] { overflow: clip; }
+.bubbles[data-entering="waiting"] > button { opacity: 0; }
+
 .bubble {
   display: flex;
   flex-direction: column;
@@ -90,34 +94,42 @@
   justify-content: center;
   gap: .45rem;
   position: relative;
-  overflow-wrap: anywhere;
-  width: min(var(--bubble-size), max(6.6rem, calc(var(--bubble-ratio) * 46cqw)), 100%);
+  overflow: hidden;
+  flex: none;
+  min-height: 0;
+  touch-action: none;
+  user-select: none;
+  --diameter: min(var(--bubble-size), max(6.6rem, calc(var(--bubble-ratio) * 46cqw)), 100cqw);
+  width: var(--diameter);
+  height: var(--diameter);
   aspect-ratio: 1;
   padding: .8rem;
   border: 1px solid color-mix(in srgb, var(--signal) 55%, var(--border));
   border-radius: 50%;
   background: radial-gradient(circle at 38% 30%, var(--card) 5%, color-mix(in srgb, var(--tint) 28%, var(--card)) 100%);
   box-shadow: 0 12px 22px color-mix(in srgb, var(--signal) 12%, transparent);
-  cursor: pointer;
-  transition: box-shadow 150ms, transform 150ms;
+  cursor: grab;
+  transition: box-shadow 150ms;
 }
 
 .bubble[aria-pressed="true"] {
   box-shadow: 0 0 0 2px var(--signal), 0 18px 32px color-mix(in srgb, var(--signal) 23%, transparent);
-  transform: scale(1.035);
+
   z-index: 1;
 }
 
+.bubble:active { cursor: grabbing; z-index: 2; }
+.bubble > span { max-width: 85%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bubble:hover { box-shadow: 0 0 0 2px var(--signal), 0 18px 32px color-mix(in srgb, var(--signal) 24%, transparent); }
 .bubble:focus-visible { outline: 3px solid var(--ring); outline-offset: 5px; }
 .deadlineChip { border-radius: 99px; background: color-mix(in srgb, var(--tint) 26%, var(--card)); padding: .22rem .55rem; font-size: .68rem; font-weight: 620; }
 .code { color: var(--muted-foreground); font-size: .72rem; letter-spacing: .075em; font-weight: 620; }
-.bubbleName { max-width: 85%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-weight: 650; line-height: 1.18; font-size: clamp(.86rem, 1.52vw, 1.22rem); letter-spacing: -.02em; }
+.bubbleName { max-width: 85%; display: block; overflow: hidden; font-weight: 650; line-height: 1.18; font-size: clamp(.86rem, 1.52vw, 1.22rem); letter-spacing: -.02em; }
 .bubbleGrade { font-size: .9rem; font-weight: 630; }
 .bubbleGrade:empty { display: none; }
 
 @container (min-width: 32rem) {
-  .bubble { width: min(var(--bubble-size), calc(var(--bubble-ratio) * 31cqw)); }
+  .bubble { --diameter: min(var(--bubble-size), calc(var(--bubble-ratio) * 31cqw)); }
 }
 
 @container (max-width: 25rem) {
