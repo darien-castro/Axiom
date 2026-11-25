@@ -136,9 +136,9 @@ function GpaEstimates({ courses, savedTranscript, onSaved }: {
               ))}
             </tbody>
           </table>
-          {usedPercentage && <p className="mt-2 text-xs text-muted-foreground">
+          {/* {usedPercentage && <p className="mt-2 text-xs text-muted-foreground">
             Percentage-only grades use A from 90%, B from 80%, C from 70%, and D from 60%.
-          </p>}
+          </p>} */}
         </Tabs.Panel>
         <Tabs.Panel value="overall" className="rounded-md focus-visible:outline-2 focus-visible:outline-ring">
           <div className="flex items-start justify-between gap-3">
@@ -202,7 +202,7 @@ function WhatIfGrade({ courseName, actualGrade, override, onChange }: {
 function GpaTotal({ value, hours, points, pending }: { value: number | null; hours: number; points: number; pending: string }) {
   return value === null ? <p className="text-sm text-muted-foreground">{pending}</p> : (
     <div>
-      <p className="text-3xl font-semibold tabular-nums">{value.toFixed(3)} <span className="text-sm font-medium text-muted-foreground">GPA</span></p>
+      <p className="text-3xl font-semibold tabular-nums">{value.toFixed(2)} <span className="text-sm font-medium text-muted-foreground">GPA</span></p>
       <p className="mt-0.5 text-xs text-muted-foreground">{points.toFixed(2)} quality points ÷ {hours.toLocaleString()} GPA hours</p>
     </div>
   );

@@ -121,7 +121,7 @@ export default function GpaSetupDialog({ rows, semesterKey, transcript, onSaved 
     else setOpen(false);
   }}>
     <Dialog.Trigger render={<Button type="button" variant={needsSetup ? "outline" : "ghost"} size="lg" className="absolute top-0 right-0" />}>
-      {needsSetup ? "Setup" : "Edit setup"}
+      {needsSetup ? "Setup" : "Configure"}
     </Dialog.Trigger>
     {needsSetup && (
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/8 p-3">
