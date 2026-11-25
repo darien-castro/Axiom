@@ -4,6 +4,8 @@ import authenticateSession from '../middleware/auth';
 import { cleanCourses } from '../mapper/mapper';
 import db from '../services/databaseService';
 
+import { buildGradeOutlook } from '../services/assignmentGradeImpact';
+
 const router = Router();
 
 type StudentWorkload = { canvas: CanvasClient; studentId: string; courses: CanvasCourse[] };
@@ -67,6 +69,14 @@ router.get('/workload/courses', authenticateSession, studentRoute(async (req, re
       canvasUrl: `${canvasBaseUrl}/courses/${encodeURIComponent(courseId)}`,
     };
   }) });
+}));
+
+router.get('/workload/courses/:courseID/outlook', authenticateSession, studentRoute<CourseParams>(async (req, res, { canvas }) => {
+  const id = req.params.courseID;
+  const [course, groups, assignments] = await Promise.all([
+    canvas.GetCourseData(id), canvas.GetCourseAssignmentGroups(id), canvas.GetCourseAssignments(id, true),
+  ]);
+  res.json(buildGradeOutlook(course, groups, assignments));
 }));
 
 function isNonnegativeNumber(value: unknown): value is number {

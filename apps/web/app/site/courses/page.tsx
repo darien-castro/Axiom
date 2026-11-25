@@ -186,6 +186,7 @@ function CourseWorkload({ demo }: { demo: boolean }) {
                 </div>
               </div>
               <div className={styles.detailBody}>
+                <Link className={styles.canvasLink} href={`/site/monte-carlo?course=${encodeURIComponent(selected.courseId)}${demo ? "&demo=1" : ""}`}>Grade Outlook →</Link>
                 {selected.canvasUrl && <a href={selected.canvasUrl} className={styles.canvasLink} target="_blank" rel="noreferrer">Open course in Canvas <span aria-hidden="true">↗</span></a>}
                 <div className={styles.pressure}>
                   <strong>{selected.summary?.pressure ?? "Deadlines unavailable"}</strong>

@@ -33,8 +33,8 @@ const navItems = [
     dataNeeded: "Past term grades, assignment completion trends",
   },
   {
-    name: "Monte Carlo",
-    shortName: "Monte Carlo",
+    name: "Grade Outlook",
+    shortName: "Grade Outlook",
     href: "/site/monte-carlo",
     icon: ChartHistogramIcon,
     dataNeeded: "Grade distributions, variance models, simulation bounds",
@@ -88,7 +88,7 @@ function SidebarMode() {
 
 function Sidebar({ demo, showAccount = !demo }: { demo: boolean; showAccount?: boolean }) {
   const pathname = usePathname();
-  const activeItems = demo ? navItems.filter(({ name }) => name === "Courses" || name === "Assignments") : navItems;
+  const activeItems = demo ? navItems.filter(({ name }) => name === "Grade Outlook" || name === "Courses" || name === "Assignments") : navItems;
   const demoQuery = demo ? "?demo=1" : "";
 
   return (

@@ -81,6 +81,10 @@ export function getWorkloadCourses(signal: AbortSignal) {
   return request<{ courses: WorkloadCourse[] }>("/workload/courses", { signal });
 }
 
+export function getGradeOutlook(id: string, signal: AbortSignal) {
+  return request<import("./grade-outlook").Outlook | { reason: string }>(`/workload/courses/${encodeURIComponent(id)}/outlook`, { signal });
+}
+
 export function getGpaCourses(signal: AbortSignal) {
   return request<{ courses: WorkloadCourse[]; gpaTranscript: GpaTranscriptTotals | null }>(
     "/workload/courses?includeGpaTranscript=true", { signal },

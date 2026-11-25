@@ -119,3 +119,45 @@ export function calculateGradeProjections(course: CanvasCourse, groups: CanvasAs
   }
   return projections;
 }
+
+export function buildGradeOutlook(course: CanvasCourse, groups: CanvasAssignmentGroup[], assignments: CanvasAssignment[]) {
+  if (hasUnavailableCourseGrade(course)) return { reason: 'This course hides grades or uses multiple grading periods.' };
+  if (groups.some(hasDropRule)) return { reason: 'This course drops scores. Its grading rules are not supported yet.' };
+  const weighted = course.apply_assignment_group_weights;
+  const incomplete = { reason: 'Canvas has incomplete points or grading weights for this course.' };
+  if (typeof weighted !== 'boolean') return incomplete;
+  const items = assignments.filter(a => countsTowardsGrade(a) && a.published !== false);
+  const configured = new Map(groups.map(g => [String(g.id), g.group_weight]));
+  const totals = new Map<string, { weight: number; points: number; earned: number; history: number[] }>();
+  const pending = [];
+  for (const a of items) {
+    const id = weighted ? String(a.assignment_group_id) : 'course';
+    const weight = weighted ? configured.get(id) : 100;
+    const points = a.points_possible;
+    if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0) return incomplete;
+    if (!weight) continue;
+    if (typeof points !== 'number' || !Number.isFinite(points) || points < 0) return incomplete;
+    const group = totals.get(id) ?? { weight, points: 0, earned: 0, history: [] as number[] };
+    totals.set(id, group);
+    group.points += points;
+    const sub = a.submission;
+    const posted = sub?.posted_at !== null && !(a.muted && !sub?.posted_at) && sub?.workflow_state !== 'pending_review';
+    const score = posted ? sub?.score : null;
+    if (score != null) {
+      if (!Number.isFinite(score)) return incomplete;
+      group.earned += score;
+      if (points > 0) group.history.push(Math.max(0, Math.min(100, 100 * score / points)));
+    } else if (points > 0) {
+      pending.push({ id: String(a.id), name: a.name, groupId: id, points, actionable: !sub?.submitted_at && !['submitted','graded','pending_review'].includes(sub?.workflow_state ?? '') && !a.locked_for_user && !(a.lock_at && Date.parse(a.lock_at) <= Date.now()) });
+    }
+  }
+  const active = [...totals.values()].filter(g => g.points > 0);
+  const totalWeight = Math.min(100, active.reduce((sum, g) => sum + g.weight, 0));
+  if (!totalWeight || [...totals.values()].some(g => !g.points && g.earned)) return incomplete;
+  const fixed = active.reduce((sum, g) => sum + 100 * g.weight / totalWeight * g.earned / g.points, 0);
+  const remaining = pending.map(({ groupId, points, ...assignment }) => {
+    const group = totals.get(groupId)!;
+    return { ...assignment, groupId, share: group.weight / totalWeight * points / group.points };
+  }).sort((a,b) => b.share - a.share);
+  return { fixed, remaining, history: Object.fromEntries([...totals].map(([id,g]) => [id,g.history])) };
+}
