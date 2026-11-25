@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 type Profile = { name: string; avatarUrl: string | null };
-const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 function fallbackProfile(): Profile | null {
   return document.cookie.split("; ").some((cookie) => cookie.startsWith("AxiomCookie="))
@@ -25,7 +24,7 @@ export default function SidebarAccount() {
       const controller = new AbortController();
       request = controller;
       try {
-        const response = await fetch(`${apiBase}/api/me/profile`, { credentials: "include", signal: controller.signal });
+        const response = await fetch(`/api/me/profile`, { credentials: "include", signal: controller.signal });
         const next = response.ok ? await response.json() as Profile : fallbackProfile();
         if (!controller.signal.aborted) setProfile(next);
       } catch {
@@ -50,7 +49,7 @@ export default function SidebarAccount() {
     setPending(true);
     setError("");
     try {
-      const response = await fetch(`${apiBase}/api/verify`, { method: "DELETE", credentials: "include" });
+      const response = await fetch(`/api/verify`, { method: "DELETE", credentials: "include" });
       if (!response.ok) throw new Error();
       window.location.replace("/");
     } catch {

@@ -69,7 +69,7 @@ export default function Home() {
     if (val === 'mocksite') {
       setStatus('success');
       setTimeout(() => {
-        router.push('/site/dashboard');
+        router.push('/mocksite');
       }, 2000);
       return;
     }
@@ -79,7 +79,7 @@ export default function Home() {
     };
     setStatus('loading');
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/verify`, {
+      const response = await fetch(`/api/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

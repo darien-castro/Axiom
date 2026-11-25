@@ -1,4 +1,3 @@
-const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export interface WorkloadCourse {
   courseId: string;
@@ -70,7 +69,7 @@ export class WorkloadRequestError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBase}/api${path}`, { ...init, credentials: "include" });
+  const response = await fetch(`/api${path}`, { ...init, credentials: "include" });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new WorkloadRequestError(response.status, data?.error || "Could not reach Axiom.");

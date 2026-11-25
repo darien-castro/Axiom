@@ -98,14 +98,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let isMounted = true;
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
     async function loadDashboard() {
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/api/dashboard`, {
+        const response = await fetch(`/api/dashboard`, {
           method: "GET",
           credentials: "include",
           headers: {
@@ -137,7 +136,7 @@ export default function DashboardPage() {
             const assignmentResults = await Promise.all(
               courses.slice(0, 4).map(async (course) => {
                 const res = await fetch(
-                  `${API_BASE}/api/courses/${course.courseID}/assignments`,
+                  `/api/courses/${course.courseID}/assignments`,
                   {
                     credentials: "include",
                   }
