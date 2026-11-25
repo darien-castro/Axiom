@@ -27,8 +27,8 @@ export default function CourseVisibilitySettings({ demo = false }: { demo?: bool
     </Card>
 
     <Dialog.Portal>
-      <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs" />
-      <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 flex max-h-[min(36rem,85dvh)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl">
+      <Dialog.Backdrop className="dialog-backdrop fixed inset-0 z-50" />
+      <Dialog.Popup className="dialog-panel fixed left-1/2 top-1/2 z-50 flex max-h-[min(36rem,85dvh)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl">
         <div className="shrink-0 border-b border-border px-5 py-4 sm:px-6">
           <Dialog.Title className="text-lg font-semibold tracking-tight">Course visibility</Dialog.Title>
           <Dialog.Description className="mt-1 text-xs text-muted-foreground">Changes save automatically.</Dialog.Description>

@@ -1,21 +1,10 @@
 .page {
   margin-inline: auto;
   max-width: 102rem;
-  padding: clamp(1rem, 4vw, 3.5rem);
+  padding: 0 clamp(1rem, 4vw, 3.5rem) clamp(1rem, 4vw, 3.5rem);
   color: var(--foreground);
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.header h1 { font-size: clamp(2rem, 4vw, 3.15rem); font-weight: 650; letter-spacing: -.06em; line-height: 1.12; }
-.header p { margin-top: .55rem; color: var(--muted-foreground); font-size: .95rem; }
 .stable { --signal: #31955e; --tint: #91d8ad; }
 .busy { --signal: #b97417; --tint: #f6cd73; }
 .overloaded { --signal: #dc6259; --tint: #f5a096; }

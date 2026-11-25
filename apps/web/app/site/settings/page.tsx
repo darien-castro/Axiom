@@ -756,8 +756,8 @@ function CanvasSettings() {
       {/* POPUP MODAL 1: How to Revoke / Create API Key Guide */}
       <Dialog.Root open={isApiKeyGuideOpen} onOpenChange={setIsApiKeyGuideOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity duration-200" />
-          <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-card p-6 md:p-8 text-card-foreground shadow-2xl max-h-[90vh] overflow-y-auto">
+          <Dialog.Backdrop className="dialog-backdrop fixed inset-0 z-50" />
+          <Dialog.Popup className="dialog-panel fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-card p-6 md:p-8 text-card-foreground shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-border/60">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
@@ -938,10 +938,10 @@ function CanvasSettings() {
       {/* POPUP MODAL 2: Delete Data Confirmation Modal */}
       <Dialog.Root open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity duration-200" />
+          <Dialog.Backdrop className="dialog-backdrop fixed inset-0 z-50" />
           <Dialog.Popup
             initialFocus={cancelDeleteRef}
-            className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-destructive/40 bg-card p-6 md:p-7 text-card-foreground shadow-2xl"
+            className="dialog-panel fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-destructive/40 bg-card p-6 md:p-7 text-card-foreground shadow-2xl"
           >
             <div className="flex items-start gap-3">
               <div className="rounded-2xl bg-destructive/15 p-3 text-destructive shrink-0">

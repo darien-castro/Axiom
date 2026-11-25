@@ -22,6 +22,7 @@ import {
   type DismissedAssignment, type RankableAssignment, type WorkloadCourse,
 } from "@/lib/course-workload";
 import { demoWorkload, demoWorkloadLabel, getDemoAssignment } from "@/lib/demo-workload";
+import PageHeader from "../page-header";
 import AssignmentGradeProjection from "./assignment-grade-projection";
 import DismissedAssignments from "./dismissed-assignments";
 
@@ -251,13 +252,9 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   };
 
   return <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 md:gap-8 md:p-10">
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Assignments</h1>
-        {/* <p className="mt-1 text-sm text-muted-foreground">{demo ? demoWorkloadLabel : ""}</p> */}
-      </div>
+    <PageHeader title="Assignments">
       {state.status === "ready" && !courses.length && dismissed.length > 0 && dismissedDialog}
-    </header>
+    </PageHeader>
     <p role="status" className="sr-only">{dismissalStatus}</p>
     <p role="status" className="sr-only">{focusStatus}</p>
     {dismissalError && <p role="alert" className="mb-3 text-sm text-destructive">{dismissalError.message}</p>}
