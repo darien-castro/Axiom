@@ -23,6 +23,7 @@ import {
 } from "@/lib/course-workload";
 import { demoWorkload, demoWorkloadLabel, getDemoAssignment } from "@/lib/demo-workload";
 import PageHeader from "../page-header";
+import { isNextUpFilter } from "@/lib/dashboard-preferences";
 import AssignmentGradeProjection from "./assignment-grade-projection";
 import DismissedAssignments from "./dismissed-assignments";
 
@@ -61,7 +62,10 @@ export default function CourseAssignments({ demo }: { demo: boolean }) {
   const workload = demo ? demoWorkload : canvasWorkload;
   const [state, setState] = useState<AssignmentState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
-  const [view, setView] = useState<WorkspaceView>("deadline");
+  const [view, setView] = useState<WorkspaceView>(() => {
+    const requested = params.get("view");
+    return isNextUpFilter(requested) ? requested : "deadline";
+  });
   const [search, setSearch] = useState("");
   const [whatIfScores, setWhatIfScores] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
@@ -344,7 +348,7 @@ function CourseFilter({ courses, selected, onChange }: {
   onChange: (ids: Set<string>) => void;
 }) {
   const all = selected.size === courses.length;
-  return <Menu.Root>
+  return <Menu.Root modal={false}>
     <Menu.Trigger render={<Button variant="outline" size="lg" className="h-9 min-w-32 justify-between gap-3 rounded-lg bg-card px-3" />}>
       {all ? "All courses" : selected.size + (selected.size === 1 ? " course" : " courses")}
       <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden="true" className="size-4 text-muted-foreground" />

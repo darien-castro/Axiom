@@ -26,6 +26,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Dialog } from "@base-ui/react/dialog";
+import { nextUpFilters, useNextUpFilter, saveDashboardPreference } from "@/lib/dashboard-preferences";
 import RelativeDatesSettings from "./relative-dates-settings";
 import CourseVisibilitySettings from "./course-visibility-settings";
 
@@ -76,6 +77,16 @@ function checkSessionSnapshot() {
     .some((row) => row.startsWith("AxiomCookie=") || row.startsWith("session="));
 }
 
+function NextUpSettings() {
+  const filter = useNextUpFilter();
+  return <label className="flex items-center justify-between gap-4 rounded-2xl border bg-card/60 p-4 text-sm font-semibold">
+    Next Up assignment filter
+    <select className="rounded-lg border bg-background px-3 py-2" value={filter} onChange={e => saveDashboardPreference("axiom.nextUp", e.target.value)}>
+      {Object.entries(nextUpFilters).map(([id,name]) => <option key={id} value={id}>{name}</option>)}
+    </select>
+  </label>;
+}
+
 export default function SettingsPage() {
   return <Suspense fallback={<LoadingState>Loading settings…</LoadingState>}>
     <SettingsView />
@@ -90,6 +101,7 @@ function SettingsView() {
         <p className="mt-1 text-sm text-muted-foreground">Demo mode · Changes are saved in this browser.</p>
       </header>
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <NextUpSettings />
         <RelativeDatesSettings />
         <CourseVisibilitySettings demo />
       </div>
@@ -327,6 +339,7 @@ function CanvasSettings() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+        <NextUpSettings />
         <RelativeDatesSettings />
         <CourseVisibilitySettings key={courseSessionRevision} />
 

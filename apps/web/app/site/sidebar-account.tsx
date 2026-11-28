@@ -61,7 +61,7 @@ export default function SidebarAccount() {
   if (!profile) return null;
 
   return <div className="min-w-0">
-    <Menu.Root>
+    <Menu.Root modal={false}>
       <Menu.Trigger aria-label={`Account menu for ${profile.name}`} title={profile.name} disabled={pending}
         className="flex w-full min-w-0 items-center justify-center gap-3 rounded-xl px-1 py-2 text-left text-xs font-semibold hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring md:justify-start md:px-3">
         <ProfilePhoto key={profile.avatarUrl ?? profile.name} profile={profile} />
